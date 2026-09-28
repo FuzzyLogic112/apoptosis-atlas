@@ -1,0 +1,1714 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>凋亡生信图谱</title>
+<meta name="description" content="细胞凋亡机制的交互式生信分析指南：凋亡通路图、九步分析流程与 R 代码、火山图、GO/KEGG 与 GSEA、PPI 核心基因和凋亡基因库。">
+<meta property="og:title" content="凋亡生信图谱">
+<meta property="og:description" content="细胞凋亡机制的交互式生信分析指南：凋亡通路图、九步分析流程与 R 代码、火山图、GO/KEGG 与 GSEA、PPI 核心基因和凋亡基因库。">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#f5f5f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e0d15" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Ccircle cx='11' cy='11' r='9.5' fill='none' stroke='%234a3c9c' stroke-width='1.5'/%3E%3Ccircle cx='9' cy='10' r='2.4' fill='%234a3c9c'/%3E%3Ccircle cx='14' cy='8.5' r='1.3' fill='%234a3c9c'/%3E%3Ccircle cx='13' cy='14' r='1.7' fill='%234a3c9c'/%3E%3Ccircle cx='8' cy='15' r='1' fill='%234a3c9c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Serif+SC:wght@600;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Noto+Serif+SC:wght@600;700&display=swap"></noscript>
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+</style>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f5f5f8; --surface:#ffffff; --surface-2:#efeef5; --surface-3:#e4e2ee;
+  --ink:#1b1929; --ink-2:#4a465e; --muted:#6f6b88;
+  --line:#e0dde9; --line-2:#c9c5d8;
+  --accent:#4a3c9c; --accent-ink:#ffffff; --accent-soft:#ebe8f7;
+  --pro:#e0612f; --pro-soft:#fbe7de;
+  --anti:#16a06f; --anti-soft:#dcf2e8;
+  --dual:#5646b8; --dual-soft:#e8e4f9;
+  --neutral:#8a86a0; --neutral-soft:#efeef4;
+  --up:#e34948; --down:#2a78d6; --mid:#e9e7f0; --ns:#c6c2d3;
+  --seq-lo:#d9d3f5; --seq-hi:#2c2272;
+  --edge:#8f8aa6; --edge-hi:#1b1929;
+  --halo:#ffffff;
+  --shadow:0 1px 2px rgba(27,25,41,.06),0 6px 20px rgba(27,25,41,.06);
+  --code-bg:#1d1a2b; --code-ink:#e6e3f3; --c-com:#8c87a8; --c-str:#9fdcb4; --c-fn:#b7abff; --c-kw:#ffb38a; --c-num:#f2d27a; --c-op:#8fc8ff;
+  --font-display:"Noto Serif SC","Songti SC","STSong","SimSun",serif;
+  --font-body:"IBM Plex Sans","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono","SFMono-Regular",Menlo,Consolas,monospace;
+  --gutter:clamp(16px,4vw,40px);
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0e0d15; --surface:#16141f; --surface-2:#1f1c2a; --surface-3:#2a2638;
+    --ink:#eeecf6; --ink-2:#bcb7d0; --muted:#8f8aa8;
+    --line:#2a2738; --line-2:#3c3852;
+    --accent:#a79bff; --accent-ink:#14121c; --accent-soft:#262042;
+    --pro:#e56a38; --pro-soft:#3a2319;
+    --anti:#1fae7c; --anti-soft:#11302a;
+    --dual:#9085e9; --dual-soft:#262144;
+    --neutral:#8f8aa8; --neutral-soft:#221f2e;
+    --up:#e66767; --down:#3987e5; --mid:#2f2c3c; --ns:#4a4661;
+    --seq-lo:#3a3268; --seq-hi:#d8d0ff;
+    --edge:#6f6a88; --edge-hi:#eeecf6;
+    --halo:#16141f;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+    --code-bg:#0b0a11;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0e0d15; --surface:#16141f; --surface-2:#1f1c2a; --surface-3:#2a2638;
+  --ink:#eeecf6; --ink-2:#bcb7d0; --muted:#8f8aa8;
+  --line:#2a2738; --line-2:#3c3852;
+  --accent:#a79bff; --accent-ink:#14121c; --accent-soft:#262042;
+  --pro:#e56a38; --pro-soft:#3a2319;
+  --anti:#1fae7c; --anti-soft:#11302a;
+  --dual:#9085e9; --dual-soft:#262144;
+  --neutral:#8f8aa8; --neutral-soft:#221f2e;
+  --up:#e66767; --down:#3987e5; --mid:#2f2c3c; --ns:#4a4661;
+  --seq-lo:#3a3268; --seq-hi:#d8d0ff;
+  --edge:#6f6a88; --edge-hi:#eeecf6;
+  --halo:#16141f;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  --code-bg:#0b0a11;
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.65;padding-inline:var(--gutter);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gene{font-family:var(--font-mono);font-style:italic;font-weight:500}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+
+/* top bar */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;margin-inline:calc(-1 * var(--gutter));padding-inline:var(--gutter);background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:20px;height:54px}
+.brand{font-family:var(--font-display);font-weight:700;font-size:17px;white-space:nowrap;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:9px}
+.brand svg{flex:none}
+.nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+.nav::-webkit-scrollbar{display:none}
+.nav a{padding:5px 10px;border-radius:6px;color:var(--ink-2);text-decoration:none;font-size:14px;white-space:nowrap}
+.nav a:hover{background:var(--surface-2);color:var(--ink)}
+.nav a.on{color:var(--accent);background:var(--accent-soft)}
+
+main{max-width:1180px;margin:0 auto}
+.sec{padding-block:56px;scroll-margin-top:64px;border-top:1px solid var(--line)}
+.sec-head{display:grid;gap:4px;margin-bottom:22px}
+.eyebrow{font-size:12px;letter-spacing:.14em;color:var(--accent);font-weight:600}
+h1,h2{font-family:var(--font-display);font-weight:700;text-wrap:balance;margin:0}
+h1{font-size:clamp(38px,5.4vw,58px);line-height:1.1;letter-spacing:.02em}
+h2{font-size:clamp(25px,3vw,31px);line-height:1.25}
+h3{font-size:15.5px;font-weight:600;margin:0;line-height:1.4}
+p{margin:0}
+.lede{color:var(--ink-2);max-width:64ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+.note{font-size:13px;color:var(--muted)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:44px;align-items:start;padding-block:48px 56px}
+.hero-text{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-content:start}
+.hero-lede{font-size:16.5px;color:var(--ink-2);max-width:40em}
+.demo-flag{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 8px;justify-self:start;max-width:100%}
+.demo-flag i{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+.toc{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 20px}
+.toc a{display:grid;gap:0;padding:9px 0;border-top:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.toc a b{font-weight:600;font-size:14.5px}
+.toc a span{font-size:13px;color:var(--muted)}
+.toc a:hover b{color:var(--accent)}
+.flow{padding:18px 18px 16px;display:grid;gap:12px;min-width:0}
+.two>*,.wf>*,.hero>*{min-width:0}
+.flow-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.flow canvas{display:block;width:100%;border-radius:6px}
+.flow-ctrl{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;font-size:13.5px}
+.flow-ctrl output{font-family:var(--font-mono);font-weight:600;min-width:4.2em;text-align:right}
+.flow-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.fs{border-top:2px solid var(--line-2);padding-top:6px}
+.fs b{display:block;font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.fs span{font-size:12px;color:var(--muted)}
+.fs.total{border-color:var(--accent)}
+.flow-explain{font-size:13px;color:var(--ink-2);border-top:1px solid var(--line);padding-top:10px}
+
+/* controls */
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-bottom:14px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:3px;padding:3px;background:var(--surface-2);border-radius:8px}
+.seg button{border:0;background:transparent;padding:5px 11px;border-radius:6px;font-size:13.5px;color:var(--ink-2);cursor:pointer}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line-2)}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-2);cursor:pointer;user-select:none}
+.switch input{appearance:none;-webkit-appearance:none;width:32px;height:18px;border-radius:999px;background:var(--line-2);position:relative;cursor:pointer;margin:0;flex:none;transition:background .15s}
+.switch input::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--surface);transition:transform .15s}
+.switch input:checked{background:var(--accent)}
+.switch input:checked::after{transform:translateX(14px)}
+.field{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink-2)}
+.field output{font-family:var(--font-mono);color:var(--ink);font-weight:600;min-width:2.6em}
+input[type=range]{accent-color:var(--accent);width:140px}
+select,input[type=search]{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line-2);border-radius:6px;padding:5px 9px}
+input[type=search]{width:180px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:var(--surface);border-radius:6px;padding:5px 10px;font-size:13px;cursor:pointer;color:var(--ink)}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;border-color:var(--line-2);color:var(--muted)}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--ink-2);align-items:center}
+.lg{display:inline-flex;align-items:center;gap:6px}
+.lg .sw{width:14px;height:10px;border-radius:3px;border:1.5px solid var(--c);background:var(--s)}
+.lg svg{flex:none}
+.grad{width:120px;height:8px;border-radius:4px}
+
+/* role pill */
+.role{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:1px 9px 1px 7px;border-radius:999px;background:var(--rs);color:var(--ink);white-space:nowrap}
+.role::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--rc)}
+.r-pro{--rc:var(--pro);--rs:var(--pro-soft)}
+.r-anti{--rc:var(--anti);--rs:var(--anti-soft)}
+.r-dual{--rc:var(--dual);--rs:var(--dual-soft)}
+.r-neutral{--rc:var(--neutral);--rs:var(--neutral-soft)}
+
+/* pathway */
+.two{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+.pw-canvas{overflow-x:auto;padding:8px}
+#pw-svg{display:block;width:100%;min-width:760px;height:auto}
+.pw-zone{font-size:12px;letter-spacing:.12em;fill:var(--muted);font-weight:600}
+.pw-mem{fill:var(--surface-3)}
+.pw-memlabel{font-size:11px;fill:var(--muted)}
+.pw-node{cursor:pointer}
+.pw-node rect.box{fill:var(--surface);stroke:var(--line-2);stroke-width:1.3;transition:opacity .2s}
+.pw-node .sym{font-family:var(--font-mono);font-style:italic;font-weight:500;font-size:12.5px;fill:var(--ink)}
+.pw-node .alias{font-size:10.5px;fill:var(--ink-2)}
+.pw-node.k-proc .sym,.pw-node.k-stress .sym,.pw-node.k-out .sym{font-family:var(--font-body);font-style:normal;font-weight:600;font-size:13px}
+.pw-node.r-pro rect.box{fill:var(--pro-soft);stroke:var(--pro)}
+.pw-node.r-anti rect.box{fill:var(--anti-soft);stroke:var(--anti)}
+.pw-node.r-dual rect.box{fill:var(--dual-soft);stroke:var(--dual)}
+.pw-node.r-neutral rect.box{fill:var(--neutral-soft);stroke:var(--neutral)}
+.pw-node.k-stress rect.box,.pw-node.k-out rect.box{fill:var(--surface-2);stroke:var(--ink-2);stroke-dasharray:4 3}
+.pw-node.k-proc rect.box{fill:var(--surface-2);stroke:var(--ink-2)}
+.pw-node rect.inner{fill:none;stroke:var(--line-2);stroke-width:1}
+.pw-node .blk{font-size:10px;font-weight:600;fill:var(--ink);display:none}
+.pw-node.blocked .blk{display:inline}
+.pw-node.blocked rect.box{stroke-dasharray:5 3;stroke-width:1.6}
+.pw-node:hover rect.box{stroke-width:2.2}
+.pw-node.sel rect.box{stroke:var(--ink);stroke-width:2.6}
+.pw-node:focus{outline:none}
+.pw-node:focus-visible rect.box{stroke:var(--accent);stroke-width:2.6}
+.pw-node.dim{opacity:.2}
+.pw-edge .ln{fill:none;stroke:var(--edge);stroke-width:1.4}
+.pw-edge .hd{fill:var(--edge)}
+.pw-edge .bar{stroke:var(--edge);stroke-width:2.2;stroke-linecap:round}
+.pw-edge.hi .ln{stroke:var(--edge-hi);stroke-width:2.2}
+.pw-edge.hi .hd{fill:var(--edge-hi)}
+.pw-edge.hi .bar{stroke:var(--edge-hi);stroke-width:2.8}
+.pw-edge.cut .ln{stroke-dasharray:3 4}
+.pw-edge.dim{opacity:.12}
+.pw-node,.pw-edge{transition:opacity .2s}
+.info{padding:18px;display:grid;gap:12px;align-content:start}
+.info h3 .gene{font-size:18px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px;margin:0}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+.info ol,.info ul{margin:0;padding-left:1.3em;font-size:14px;color:var(--ink-2);display:grid;gap:3px}
+.info .desc{font-size:14px;color:var(--ink-2)}
+.info .links{display:flex;flex-wrap:wrap;gap:8px}
+.rel{display:grid;gap:6px;font-size:13.5px}
+.rel div{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rel .lab{color:var(--muted);min-width:4.2em}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:12.5px;cursor:pointer;line-height:1.6}
+.chip:hover{border-color:var(--accent)}
+.chip .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.chip .v{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.dot.up{background:var(--up)} .dot.down{background:var(--down)} .dot.ns{background:var(--ns)}
+
+/* workflow */
+.wf{display:grid;grid-template-columns:270px minmax(0,1fr);gap:18px;align-items:start}
+.wf-steps{list-style:none;margin:0;padding:6px;display:grid;gap:2px}
+.wf-steps button{width:100%;display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;text-align:left;border:0;background:transparent;padding:8px 10px;border-radius:7px;cursor:pointer}
+.wf-steps button:hover{background:var(--surface-2)}
+.wf-steps button[aria-current="step"]{background:var(--accent-soft)}
+.wf-steps .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-family:var(--font-mono);font-size:12px;font-weight:600;border:1.5px solid var(--line-2);color:var(--ink-2)}
+.wf-steps button[aria-current="step"] .n{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.wf-steps .t{display:grid;line-height:1.35}
+.wf-steps .t b{font-weight:600;font-size:14.5px}
+.wf-steps .t span{font-size:11.5px;color:var(--muted);font-family:var(--font-mono)}
+.wf-detail{padding:22px 24px;display:grid;gap:16px;min-width:0}
+.wf-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline}
+.wf-top h3{font-family:var(--font-display);font-size:22px;font-weight:700}
+.wf-goal{font-size:15px;color:var(--ink-2);max-width:68ch}
+.wf-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+.wf-block{display:grid;gap:8px;align-content:start}
+.wf-block h4{margin:0;font-size:12px;letter-spacing:.1em;color:var(--muted);font-weight:600}
+.wf-block ul{margin:0;padding-left:1.2em;display:grid;gap:5px;font-size:14px;color:var(--ink-2)}
+.tool{font-family:var(--font-mono);font-size:12.5px;padding:2px 8px;border-radius:5px;background:var(--surface-2);border:1px solid var(--line)}
+.pitfall{border-left:3px solid var(--pro);background:var(--pro-soft);padding:10px 14px;border-radius:0 8px 8px 0;font-size:14px;color:var(--ink)}
+.pitfall b{font-weight:600}
+.code-wrap{position:relative;min-width:0}
+.code-bar{display:flex;justify-content:space-between;align-items:center;background:var(--code-bg);color:var(--c-com);font-size:12px;padding:8px 12px 0 16px;border-radius:8px 8px 0 0;font-family:var(--font-mono)}
+.code-bar button{background:transparent;border:1px solid #3a3650;color:var(--code-ink);border-radius:5px;padding:2px 9px;font-size:12px;cursor:pointer}
+.code-bar button:hover{border-color:var(--c-fn)}
+pre.code{margin:0;background:var(--code-bg);color:var(--code-ink);border-radius:0 0 8px 8px;padding:10px 16px 16px;overflow-x:auto;font-family:var(--font-mono);font-size:12.8px;line-height:1.65;tab-size:2}
+.tk-com{color:var(--c-com);font-style:italic}.tk-str{color:var(--c-str)}.tk-fn{color:var(--c-fn)}.tk-kw{color:var(--c-kw)}.tk-num{color:var(--c-num)}.tk-op{color:var(--c-op)}
+
+/* charts */
+.chart-box{padding:14px 14px 10px;min-width:0}
+.chart-box svg{display:block;overflow:visible}
+.axis text,.tick-l{font-size:11px;fill:var(--muted);font-family:var(--font-mono)}
+.axis-title{font-size:12px;fill:var(--ink-2)}
+.grid-l{stroke:var(--line);stroke-width:1}
+.base-l{stroke:var(--line-2);stroke-width:1}
+.th-l{stroke:var(--ink-2);stroke-width:1;stroke-dasharray:4 4;opacity:.7}
+.pt{transition:fill .15s}
+.pt.ns{fill:var(--ns);fill-opacity:.6}
+.pt.up{fill:var(--up);fill-opacity:.8}
+.pt.down{fill:var(--down);fill-opacity:.8}
+.pt.named{stroke:var(--surface);stroke-width:1.6;fill-opacity:1}
+.pt.named.ns{fill:var(--ink-2);fill-opacity:.55}
+.vlabel{font-family:var(--font-mono);font-style:italic;font-size:11px;fill:var(--ink);paint-order:stroke;stroke:var(--halo);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.sel-ring{fill:none;stroke:var(--ink);stroke-width:2}
+.side{padding:16px;display:grid;gap:14px;align-content:start}
+.stat-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{padding:8px 10px;border:1px solid var(--line);border-radius:8px;display:grid;gap:0}
+.stat b{font-size:22px;font-weight:600;line-height:1.2}
+.stat span{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.stat span i{width:8px;height:8px;border-radius:50%;flex:none}
+.side h4{margin:0 0 6px;font-size:12px;letter-spacing:.1em;color:var(--muted);font-weight:600}
+.card{border:1px solid var(--line);border-radius:8px;padding:12px;display:grid;gap:8px;background:var(--surface-2)}
+.card .row{display:flex;gap:14px;flex-wrap:wrap;font-size:13.5px}
+.card .row span{color:var(--muted)}
+.empty{font-size:13.5px;color:var(--muted)}
+
+.tabs{margin-bottom:14px}
+.en-scroll{overflow-x:auto}
+.en-row{cursor:pointer}
+.en-row rect.hit{fill:transparent}
+.en-row:hover rect.hit{fill:var(--surface-2)}
+.en-row.on rect.hit{fill:var(--accent-soft)}
+.en-row:focus{outline:none}
+.en-row:focus-visible rect.hit{stroke:var(--accent);stroke-width:2}
+.en-zh{font-size:13px;fill:var(--ink)}
+.en-id{font-size:10.5px;fill:var(--muted);font-family:var(--font-mono)}
+.en-dot{stroke:var(--surface);stroke-width:2}
+.legend-v{display:grid;gap:10px;font-size:12px;color:var(--ink-2)}
+.legend-v .gl{display:grid;gap:4px}
+.legend-v .gl .ends{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.sizes{display:flex;align-items:flex-end;gap:14px}
+.sizes div{display:grid;justify-items:center;gap:2px;font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.sizes i{display:block;border-radius:50%;border:1.5px solid var(--ink-2)}
+.gsea-line{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round}
+.gsea-hit{stroke:var(--ink);stroke-width:1}
+.gsea-pos{fill:var(--up);fill-opacity:.35}
+.gsea-neg{fill:var(--down);fill-opacity:.35}
+.gsea-peak{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+
+.ppi-link{stroke:var(--line-2);stroke-width:1.3}
+.ppi-link.hi{stroke:var(--ink-2);stroke-width:2}
+.ppi-node{cursor:grab}
+.ppi-node:active{cursor:grabbing}
+.ppi-node circle.c{stroke:var(--surface);stroke-width:2}
+.ppi-node circle.ring{fill:none;stroke:var(--accent);stroke-width:2.5}
+.ppi-node text{font-family:var(--font-mono);font-style:italic;font-size:11px;fill:var(--ink);paint-order:stroke;stroke:var(--halo);stroke-width:3px;stroke-linejoin:round;pointer-events:none}
+.ppi-node.top text{font-weight:600}
+.ppi-node.dim,.ppi-link.dim{opacity:.2}
+.ppi-node.sel circle.c{stroke:var(--ink);stroke-width:2.5}
+.rank{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+.rank button{width:100%;display:grid;grid-template-columns:22px minmax(0,1fr) 54px;gap:8px;align-items:center;border:0;background:transparent;padding:4px 6px;border-radius:6px;cursor:pointer;text-align:left;font-size:13px}
+.rank button:hover{background:var(--surface-2)}
+.rank .i{font-family:var(--font-mono);font-size:11.5px;color:var(--muted)}
+.rank .bar{display:grid;gap:3px}
+.rank .bar i{display:block;height:4px;border-radius:2px;background:var(--accent)}
+.rank .val{font-family:var(--font-mono);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* gene table */
+.tbl-tools{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:12px}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:1040px;font-size:14px}
+th{text-align:left;font-weight:600;font-size:12px;letter-spacing:.06em;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line-2);white-space:nowrap}
+th button{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;letter-spacing:inherit}
+th button:hover{color:var(--accent)}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:var(--surface-2)}
+td.fn{color:var(--ink-2);font-size:13.5px;min-width:320px}
+.fc{display:grid;grid-template-columns:64px auto;gap:8px;align-items:center;font-family:var(--font-mono);font-size:12.5px;white-space:nowrap}
+.fc .track{position:relative;height:8px;background:var(--surface-2);border-radius:2px}
+.fc .track::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--line-2)}
+.fc .track i{position:absolute;top:0;bottom:0;border-radius:2px}
+td .acts{display:flex;gap:6px;white-space:nowrap}
+td .acts .btn{white-space:nowrap}
+td.cls{white-space:nowrap}
+.count-line{font-size:13px;color:var(--muted)}
+
+/* refs */
+.refs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 28px}
+@media (max-width:760px){.refs{grid-template-columns:1fr}}
+.refs a{display:grid;padding:12px 0;border-top:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.refs a b{font-weight:600;font-size:14.5px}
+.refs a span{font-size:13px;color:var(--muted)}
+.refs a:hover b{color:var(--accent)}
+footer{max-width:1180px;margin:0 auto;padding-block:28px 40px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+
+.tip{position:fixed;z-index:60;pointer-events:none;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;box-shadow:var(--shadow);font-size:12.5px;max-width:280px;line-height:1.5}
+.tip .tv{font-family:var(--font-mono);font-weight:600;font-size:13px;color:var(--ink)}
+.tip .tl{color:var(--ink-2)}
+.tip .tg{font-family:var(--font-mono);font-style:italic;font-weight:600}
+
+@media (max-width:1000px){
+  .two,.wf{grid-template-columns:minmax(0,1fr)}
+  .wf-steps{grid-auto-flow:column;grid-auto-columns:minmax(150px,1fr);overflow-x:auto}
+}
+@media (max-width:900px){
+  .hero{grid-template-columns:minmax(0,1fr);gap:32px}
+}
+@media (max-width:640px){
+  .toc{grid-template-columns:minmax(0,1fr)}
+  .wf-cols{grid-template-columns:minmax(0,1fr)}
+  .wf-detail{padding:18px 16px}
+  .flow-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .brand span.full{display:none}
+  input[type=search]{width:150px}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="#top" aria-label="凋亡生信图谱">
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="9.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="9" cy="10" r="2.4" fill="currentColor"/><circle cx="14" cy="8.5" r="1.3" fill="currentColor"/><circle cx="13" cy="14" r="1.7" fill="currentColor"/><circle cx="8" cy="15" r="1" fill="currentColor"/></svg>
+      <span class="full">凋亡生信图谱</span>
+    </a>
+    <nav class="nav" aria-label="页面导航">
+      <a href="#pathway">通路机制</a>
+      <a href="#workflow">分析流程</a>
+      <a href="#deg">差异表达</a>
+      <a href="#enrich">富集分析</a>
+      <a href="#ppi">PPI 网络</a>
+      <a href="#genes">基因库</a>
+      <a href="#refs">资源</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-text">
+      <div class="eyebrow">细胞凋亡 × 生物信息学</div>
+      <h1>凋亡生信图谱</h1>
+      <p class="hero-lede">把细胞凋亡的分子机制和一套常用的生信分析流程放在同一页：先在通路图上看信号怎么传递，再用示例数据走一遍差异分析、富集分析和核心基因筛选。</p>
+      <div class="demo-flag"><i></i>表达量、富集结果与流式数据均为模拟示例，用于演示分析思路</div>
+      <ul class="toc">
+        <li><a href="#pathway"><b>通路机制</b><span>外源性、内源性与执行阶段，可点击基因</span></a></li>
+        <li><a href="#workflow"><b>分析流程</b><span>九个步骤，附可复制的 R 代码</span></a></li>
+        <li><a href="#deg"><b>差异表达</b><span>阈值可调的交互式火山图</span></a></li>
+        <li><a href="#enrich"><b>富集分析</b><span>GO / KEGG 气泡图与 GSEA</span></a></li>
+        <li><a href="#ppi"><b>PPI 网络</b><span>三种中心性算法的核心基因排名</span></a></li>
+        <li><a href="#genes"><b>基因库</b><span><span id="gene-count">42</span> 个凋亡相关基因，可检索</span></a></li>
+      </ul>
+    </div>
+    <div class="panel flow" aria-labelledby="flow-title">
+      <div class="flow-head">
+        <h3 id="flow-title">流式检测 · Annexin V / PI</h3>
+        <span class="note">模拟数据</span>
+      </div>
+      <canvas id="flow-canvas" role="img" aria-label="Annexin V 与 PI 双染流式散点图，四个象限分别代表活细胞、早期凋亡、晚期凋亡和坏死细胞"></canvas>
+      <div class="flow-ctrl">
+        <label for="flow-t">药物处理时间</label>
+        <input type="range" id="flow-t" min="0" max="48" step="2" value="24">
+        <output id="flow-t-out" for="flow-t">24 h</output>
+      </div>
+      <div class="flow-stats" id="flow-stats"></div>
+      <p class="flow-explain">Annexin V 结合外翻到细胞膜外侧的磷脂酰丝氨酸，标记早期凋亡；PI 只能进入膜完整性丧失的细胞，标记晚期凋亡或坏死。总凋亡率通常取早期与晚期凋亡之和。</p>
+    </div>
+  </section>
+
+  <section class="sec" id="pathway">
+    <div class="sec-head">
+      <div class="eyebrow">机制</div>
+      <h2>凋亡信号通路</h2>
+      <p class="lede">细胞凋亡由两条起始通路驱动：死亡受体介导的外源性通路和线粒体介导的内源性通路，二者汇聚到 caspase-3/7 执行阶段。点击任意基因查看功能；选择一个情景，看信号沿哪条路径传递。</p>
+    </div>
+    <div class="controls">
+      <div class="seg" id="pw-scen" role="group" aria-label="信号情景"></div>
+      <label class="switch" for="pw-overlay"><input type="checkbox" id="pw-overlay"> 叠加示例表达谱</label>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <div class="pw-canvas"><svg id="pw-svg" role="group" aria-label="细胞凋亡信号通路图"></svg></div>
+        <div class="legend" id="pw-legend" style="padding:4px 16px 14px"></div>
+      </div>
+      <aside class="panel info" id="pw-info" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section class="sec" id="workflow">
+    <div class="sec-head">
+      <div class="eyebrow">方法</div>
+      <h2>生信分析流程</h2>
+      <p class="lede">凋亡机制类生信研究的常见路线：从公共数据库取数，筛选凋亡相关差异基因（ARDEGs），通过富集、互作网络和机器学习锁定核心基因，最后回到临床关联和实验验证。</p>
+    </div>
+    <div class="wf">
+      <ol class="panel wf-steps" id="wf-steps"></ol>
+      <article class="panel wf-detail" id="wf-detail" aria-live="polite"></article>
+    </div>
+  </section>
+
+  <section class="sec" id="deg">
+    <div class="sec-head">
+      <div class="eyebrow">示例数据</div>
+      <h2>差异表达火山图</h2>
+      <p class="lede">示例数据模拟一组肿瘤与正常组织的比较：2,000 个基因，其中 <span id="named-n">42</span> 个为已注释的凋亡基因（带描边的圆点）。调整阈值，观察凋亡相关差异基因如何变化；点击圆点查看详情。</p>
+    </div>
+    <div class="controls">
+      <label class="field" for="vp-fc">|log₂FC| ≥ <output id="vp-fc-out" for="vp-fc">1.0</output><input type="range" id="vp-fc" min="0.5" max="3" step="0.1" value="1"></label>
+      <label class="field" for="vp-p">padj &lt;
+        <select id="vp-p"><option value="0.01">0.01</option><option value="0.05" selected>0.05</option><option value="0.1">0.1</option></select>
+      </label>
+      <label class="field" for="vp-q"><input type="search" id="vp-q" list="gene-list" placeholder="查找基因，如 CASP3" autocomplete="off"></label>
+      <label class="switch" for="vp-lab"><input type="checkbox" id="vp-lab" checked> 标注凋亡相关 DEGs</label>
+    </div>
+    <datalist id="gene-list"></datalist>
+    <div class="two">
+      <div class="panel chart-box">
+        <div id="vp-chart"></div>
+        <div class="legend" style="padding:6px 4px 2px">
+          <span class="lg"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="var(--up)"/></svg>上调</span>
+          <span class="lg"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="var(--down)"/></svg>下调</span>
+          <span class="lg"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="var(--ns)"/></svg>不显著</span>
+          <span class="lg"><svg width="14" height="14"><circle cx="7" cy="7" r="4.5" fill="var(--ink-2)" stroke="var(--surface)" stroke-width="1.6"/><circle cx="7" cy="7" r="6.2" fill="none" stroke="var(--line-2)" stroke-width="1"/></svg>凋亡基因</span>
+          <span class="lg"><svg width="18" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="var(--ink-2)" stroke-dasharray="4 4"/></svg>阈值线</span>
+        </div>
+      </div>
+      <aside class="panel side" id="vp-side" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section class="sec" id="enrich">
+    <div class="sec-head">
+      <div class="eyebrow">示例数据</div>
+      <h2>富集分析</h2>
+      <p class="lede">对默认阈值下的 <span class="ardeg-n">21</span> 个 ARDEGs 做 GO / KEGG 过表达分析（ORA），并用全部基因的 log₂FC 排序做 GSEA。点击条目查看其中的基因。</p>
+    </div>
+    <div class="seg tabs" id="en-tabs" role="group" aria-label="富集方法">
+      <button type="button" data-t="go" aria-pressed="true">GO 生物过程</button>
+      <button type="button" data-t="kegg" aria-pressed="false">KEGG 通路</button>
+      <button type="button" data-t="gsea" aria-pressed="false">GSEA</button>
+    </div>
+    <div class="two">
+      <div class="panel chart-box">
+        <div class="en-scroll" id="en-chart"></div>
+      </div>
+      <aside class="panel side" id="en-side" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section class="sec" id="ppi">
+    <div class="sec-head">
+      <div class="eyebrow">示例数据</div>
+      <h2>PPI 网络与核心基因</h2>
+      <p class="lede">节点为默认阈值下的 ARDEGs，边为文献报道的相互作用（手工整理，仅作演示，实际分析请以 STRING 导出结果为准）。切换中心性算法，比较 Top 10 核心基因；节点可拖动。</p>
+    </div>
+    <div class="controls">
+      <div class="seg" id="ppi-metric" role="group" aria-label="中心性算法">
+        <button type="button" data-m="degree" aria-pressed="true">Degree</button>
+        <button type="button" data-m="betweenness" aria-pressed="false">Betweenness</button>
+        <button type="button" data-m="closeness" aria-pressed="false">Closeness</button>
+      </div>
+      <div class="legend">
+        <span class="lg"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="var(--up)"/></svg>上调</span>
+        <span class="lg"><svg width="10" height="10"><circle cx="5" cy="5" r="4" fill="var(--down)"/></svg>下调</span>
+        <span class="lg"><svg width="16" height="16"><circle cx="8" cy="8" r="4" fill="var(--ns)"/><circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--accent)" stroke-width="2"/></svg>Top 10</span>
+        <span class="lg">圆点大小 = 中心性得分</span>
+      </div>
+    </div>
+    <div class="two">
+      <div class="panel chart-box"><div id="ppi-chart"></div></div>
+      <aside class="panel side" id="ppi-side" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section class="sec" id="genes">
+    <div class="sec-head">
+      <div class="eyebrow">参考</div>
+      <h2>凋亡基因库</h2>
+      <p class="lede">本页涉及的凋亡相关基因。按 HGNC 惯例，基因符号用斜体，蛋白名用正体。示例 log₂FC 来自上方的模拟数据。</p>
+    </div>
+    <div class="tbl-tools">
+      <label class="field" for="gt-q"><input type="search" id="gt-q" placeholder="搜索基因、别名或功能" autocomplete="off"></label>
+      <label class="field" for="gt-cls">类别
+        <select id="gt-cls"><option value="">全部</option></select>
+      </label>
+      <div class="seg" id="gt-role" role="group" aria-label="作用">
+        <button type="button" data-r="" aria-pressed="true">全部</button>
+        <button type="button" data-r="pro" aria-pressed="false">促凋亡</button>
+        <button type="button" data-r="anti" aria-pressed="false">抗凋亡</button>
+        <button type="button" data-r="dual" aria-pressed="false">双向</button>
+      </div>
+      <span class="count-line" id="gt-count"></span>
+    </div>
+    <div class="panel tbl-wrap">
+      <table>
+        <thead><tr>
+          <th><button type="button" data-sort="s">基因</button></th>
+          <th>蛋白 / 别名</th>
+          <th><button type="button" data-sort="cls">类别</button></th>
+          <th>作用</th>
+          <th><button type="button" data-sort="lfc">示例 log₂FC</button></th>
+          <th>功能</th>
+          <th>定位</th>
+        </tr></thead>
+        <tbody id="gt-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="sec" id="refs">
+    <div class="sec-head">
+      <div class="eyebrow">资源</div>
+      <h2>数据库与工具</h2>
+    </div>
+    <div class="refs">
+      <a href="https://www.kegg.jp/pathway/hsa04210" target="_blank" rel="noopener"><b>KEGG hsa04210</b><span>人类 Apoptosis 通路图</span></a>
+      <a href="https://reactome.org/content/detail/R-HSA-109581" target="_blank" rel="noopener"><b>Reactome R-HSA-109581</b><span>Apoptosis 反应层级</span></a>
+      <a href="https://www.ebi.ac.uk/QuickGO/term/GO:0006915" target="_blank" rel="noopener"><b>GO:0006915</b><span>apoptotic process，QuickGO 条目</span></a>
+      <a href="https://www.gsea-msigdb.org/gsea/msigdb/human/geneset/HALLMARK_APOPTOSIS.html" target="_blank" rel="noopener"><b>MSigDB HALLMARK_APOPTOSIS</b><span>Hallmark 凋亡基因集</span></a>
+      <a href="https://www.ncbi.nlm.nih.gov/geo/" target="_blank" rel="noopener"><b>GEO</b><span>芯片与测序表达数据</span></a>
+      <a href="https://portal.gdc.cancer.gov/" target="_blank" rel="noopener"><b>GDC / TCGA</b><span>肿瘤转录组与临床数据</span></a>
+      <a href="https://string-db.org/" target="_blank" rel="noopener"><b>STRING</b><span>蛋白互作网络</span></a>
+      <a href="https://bioconductor.org/packages/clusterProfiler/" target="_blank" rel="noopener"><b>clusterProfiler</b><span>GO / KEGG 富集与 GSEA</span></a>
+      <a href="https://www.genecards.org/" target="_blank" rel="noopener"><b>GeneCards</b><span>基因注释与相关性评分</span></a>
+    </div>
+  </section>
+</main>
+<footer>本页为教学演示。火山图、富集、GSEA、PPI 与流式图中的数值均为模拟生成，不代表任何真实数据集；通路与基因功能描述基于公认的凋亡机制。</footer>
+
+<div class="tip" id="tip" hidden></div>
+
+<script src="assets/d3.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const scrollOpts = { behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' };
+
+function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gaussOf(rng){ let spare = null; return () => { if (spare !== null){ const s = spare; spare = null; return s; } let u = 0; while (u === 0) u = rng(); const v = rng(); const m = Math.sqrt(-2 * Math.log(u)); spare = m * Math.sin(2 * Math.PI * v); return m * Math.cos(2 * Math.PI * v); }; }
+function erfc(x){ const z = Math.abs(x); const t = 1 / (1 + 0.5 * z); const r = t * Math.exp(-z*z - 1.26551223 + t*(1.00002368 + t*(0.37409196 + t*(0.09678418 + t*(-0.18628806 + t*(0.27886807 + t*(-1.13520398 + t*(1.48851587 + t*(-0.82215223 + t*0.17087277))))))))); return x >= 0 ? r : 2 - r; }
+function h(tag, props = {}, kids = []){
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)){
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'style') e.style.cssText = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of [].concat(kids)){ if (c == null) continue; e.append(c.nodeType ? c : document.createTextNode(String(c))); }
+  return e;
+}
+const fmtP = p => p < 0.001 ? p.toExponential(1) : p.toFixed(3);
+const fmtFC = v => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2);
+
+/* ---------------- gene knowledge base ---------------- */
+const CLS = ['死亡配体','死亡受体','接头蛋白','起始 caspase','BH3-only','抗凋亡 BCL-2','效应 BAX/BAK','线粒体释放因子','凋亡体','IAP 家族','执行 caspase','底物与核酸酶','转录与存活信号'];
+const ROLE_ZH = { pro:'促凋亡', anti:'抗凋亡', dual:'双向', neutral:'标志物' };
+const GENES = [
+ ['TNF','TNF-α','肿瘤坏死因子','死亡配体','dual','结合 TNFR1 后形成复合物 I 激活 NF-κB 促存活；当 NF-κB 或 cIAP 受抑时转为复合物 II，激活 caspase-8 诱导凋亡。',0.7,0.06],
+ ['FASLG','FasL','Fas 配体','死亡配体','pro','主要由活化 T 细胞和 NK 细胞表达，结合 FAS 触发死亡诱导信号复合物（DISC）组装。',-0.9,0.02],
+ ['TNFSF10','TRAIL','TNF 相关凋亡诱导配体','死亡配体','pro','结合 DR4/DR5 诱导凋亡，对多种肿瘤细胞有选择性杀伤作用。',-1.8,2e-6],
+ ['FAS','CD95','Fas 细胞表面死亡受体','死亡受体','pro','死亡受体，胞内死亡结构域（DD）募集 FADD。',-1.5,1e-5],
+ ['TNFRSF1A','TNFR1','TNF 受体 1','死亡受体','dual','TNF 的主要受体，经 TRADD 介导 NF-κB 存活信号，或凋亡与坏死性凋亡。',0.3,0.3],
+ ['TNFRSF10A','DR4','TRAIL 受体 1','死亡受体','pro','TRAIL 受体之一，结合后募集 FADD 和 caspase-8。',0.6,0.04],
+ ['TNFRSF10B','DR5','TRAIL 受体 2','死亡受体','pro','受 p53 转录调控，把内源性应激信号与外源性通路连接起来。',1.3,1e-4],
+ ['TRADD','TRADD','TNFR1 相关死亡结构域蛋白','接头蛋白','dual','在 TNF 信号中连接 TNFR1 与 FADD、RIPK1，决定走存活还是死亡。',0.1,0.8],
+ ['FADD','FADD','Fas 相关死亡结构域蛋白','接头蛋白','pro','通过 DD 与受体结合、通过死亡效应结构域（DED）募集 procaspase-8/10，组装 DISC。',1.05,1e-3],
+ ['CFLAR','c-FLIP','CASP8 与 FADD 样凋亡调节蛋白','接头蛋白','anti','无催化活性的 caspase-8 同源物，与 procaspase-8 竞争 DISC 结合，抑制外源性凋亡。',1.2,5e-4],
+ ['CASP8','caspase-8','半胱天冬酶 8','起始 caspase','pro','外源性通路的起始 caspase，在 DISC 上二聚化自活化，剪切 caspase-3/7 和 BID。',-1.2,6e-4],
+ ['CASP10','caspase-10','半胱天冬酶 10','起始 caspase','pro','与 caspase-8 同源的起始 caspase，同样在 DISC 上活化。',-1.02,6e-3],
+ ['BID','BID / tBID','BH3 相互作用域死亡激动剂','BH3-only','pro','被 caspase-8 剪切为 tBID 后转位到线粒体激活 BAX/BAK，连接外源性与内源性通路，在 II 型细胞中尤为关键。',-0.4,0.1],
+ ['BCL2L11','BIM','BCL2 样蛋白 11','BH3-only','pro','强效 BH3-only 蛋白，既能直接激活 BAX/BAK，也能中和全部抗凋亡 BCL-2 成员。',-1.3,3e-4],
+ ['BAD','BAD','BCL2 相关死亡促进因子','BH3-only','pro','主要结合 BCL-2 与 BCL-XL；被 AKT 磷酸化后与 14-3-3 结合而失活。',-0.2,0.5],
+ ['BBC3','PUMA','BCL2 结合组分 3','BH3-only','pro','p53 直接靶基因，可中和全部抗凋亡 BCL-2 成员，是 DNA 损伤诱导凋亡的关键介质。',-1.4,2e-4],
+ ['PMAIP1','NOXA','佛波酯诱导蛋白 1','BH3-only','pro','p53 靶基因，选择性结合 MCL-1（及 A1）并促进其降解。',-0.3,0.35],
+ ['BCL2','BCL-2','B 细胞淋巴瘤 2','抗凋亡 BCL-2','anti','结合并隔离 BH3-only 蛋白和活化的 BAX，阻止线粒体外膜通透化；维奈克拉（venetoclax）的靶点。',-1.7,2e-6],
+ ['BCL2L1','BCL-XL','BCL2 样蛋白 1','抗凋亡 BCL-2','anti','抗凋亡 BCL-2 成员，在多种实体瘤中高表达，与化疗耐药相关。',1.9,1e-8],
+ ['MCL1','MCL-1','髓细胞白血病蛋白 1','抗凋亡 BCL-2','anti','半衰期短的抗凋亡蛋白，主要抑制 BAK；在肿瘤中常扩增，是 BCL-2 抑制剂耐药的常见原因。',1.6,3e-6],
+ ['BAX','BAX','BCL2 相关 X 蛋白','效应 BAX/BAK','pro','活化后在线粒体外膜寡聚化成孔，导致外膜通透化（MOMP）；也是 p53 靶基因。',-0.6,0.03],
+ ['BAK1','BAK','BCL2 拮抗/杀伤蛋白 1','效应 BAX/BAK','pro','定位于线粒体外膜的效应蛋白，与 BAX 功能部分冗余。',0.5,0.08],
+ ['CYCS','Cyt c','细胞色素 c','线粒体释放因子','pro','MOMP 后释放到胞质，与 APAF1 和 dATP 结合组装凋亡体。',0.6,0.03],
+ ['DIABLO','SMAC','第二线粒体来源 caspase 激活物','线粒体释放因子','pro','MOMP 后释放，结合并拮抗 XIAP 等 IAP，解除其对 caspase 的抑制。',-1.05,4e-3],
+ ['HTRA2','Omi','HtrA 丝氨酸肽酶 2','线粒体释放因子','pro','线粒体丝氨酸蛋白酶，释放后拮抗 IAP。',-0.2,0.6],
+ ['AIFM1','AIF','凋亡诱导因子','线粒体释放因子','pro','线粒体释放后入核，介导不依赖 caspase 的染色质凝集与大片段 DNA 断裂。',0.3,0.3],
+ ['ENDOG','EndoG','核酸内切酶 G','线粒体释放因子','pro','线粒体释放后参与不依赖 caspase 的 DNA 降解。',-0.5,0.2],
+ ['APAF1','APAF-1','凋亡蛋白酶激活因子 1','凋亡体','pro','结合细胞色素 c 后七聚化形成凋亡体，募集并激活 procaspase-9。',-1.1,2e-3],
+ ['CASP9','caspase-9','半胱天冬酶 9','起始 caspase','pro','内源性通路的起始 caspase，在凋亡体上活化，剪切激活 caspase-3/7。',-1.3,4e-4],
+ ['XIAP','XIAP','X 连锁凋亡抑制蛋白','IAP 家族','anti','最强的内源性 caspase 抑制蛋白，直接抑制 caspase-3、-7、-9。',1.3,2e-4],
+ ['BIRC2','cIAP1','杆状病毒 IAP 重复蛋白 2','IAP 家族','anti','E3 泛素连接酶，调控 TNF 信号中 RIPK1 的泛素化与 NF-κB 活化。',0.8,0.01],
+ ['BIRC5','Survivin','存活素','IAP 家族','anti','参与有丝分裂调控和凋亡抑制，在肿瘤中普遍高表达。',3.4,1e-15],
+ ['CASP3','caspase-3','半胱天冬酶 3','执行 caspase','pro','主要执行 caspase，剪切 PARP1、ICAD 等数百种底物；cleaved caspase-3 是最常用的凋亡检测指标。',1.2,1e-4],
+ ['CASP7','caspase-7','半胱天冬酶 7','执行 caspase','pro','执行 caspase，与 caspase-3 功能部分冗余。',0.8,0.01],
+ ['CASP6','caspase-6','半胱天冬酶 6','执行 caspase','pro','执行 caspase，剪切核纤层蛋白 lamin A/C，参与核解体。',1.1,8e-4],
+ ['PARP1','PARP-1','多聚 ADP 核糖聚合酶 1','底物与核酸酶','neutral','DNA 修复酶，被 caspase-3/7 剪切为 89 kDa 与 24 kDa 片段；cleaved PARP 是 Western blot 常用的凋亡标志物。',1.5,3e-7],
+ ['DFFB','CAD','DNA 片段化因子 B','底物与核酸酶','pro','核酸酶；抑制伴侣 ICAD 被 caspase-3 剪切后释放，造成核小体间 DNA 片段化（DNA ladder、TUNEL 阳性）。',-0.3,0.4],
+ ['DFFA','ICAD','DNA 片段化因子 A','底物与核酸酶','anti','CAD 的抑制伴侣，被 caspase-3 剪切后失去抑制作用。',0.2,0.6],
+ ['TP53','p53','肿瘤蛋白 p53','转录与存活信号','pro','感知 DNA 损伤等应激，转录激活 PUMA、NOXA、BAX、FAS、DR5 等促凋亡基因。',-0.4,0.12],
+ ['MDM2','MDM2','MDM2 原癌基因','转录与存活信号','anti','E3 泛素连接酶，促进 p53 降解，是 p53 的主要负调控因子。',1.4,1e-5],
+ ['NFKB1','NF-κB p50','核因子 κB 亚基 1','转录与存活信号','anti','NF-κB 通路转录 c-FLIP、cIAP、BCL-XL 等促存活基因。',0.9,4e-3],
+ ['AKT1','AKT','AKT 丝氨酸/苏氨酸激酶 1','转录与存活信号','anti','存活信号激酶，磷酸化 BAD、FOXO 等以抑制凋亡。',0.4,0.2]
+].map(([s,a,full,cls,role,desc,lfc,padj]) => ({ s, a, full, cls, role, desc, lfc, padj }));
+const G = Object.fromEntries(GENES.map(g => [g.s, g]));
+
+/* ---------------- simulated expression data ---------------- */
+const ALL = GENES.map(g => ({ s:g.s, lfc:g.lfc, padj:g.padj, named:true }));
+{
+  const rng = mulberry32(20260927), gauss = gaussOf(rng);
+  const nBg = 2000 - ALL.length;
+  for (let i = 0; i < nBg; i++){
+    const big = rng() < 0.09;
+    const lfc = gauss() * (big ? 1.35 : 0.42);
+    const se = 0.12 + rng() * 0.3;
+    const p = erfc(Math.abs(lfc) / se / Math.SQRT2);
+    const raw = -Math.log10(Math.max(1e-300, Math.min(1, p * 2.5 * (0.6 + rng()))));
+    const yy = 15.5 * (1 - Math.exp(-raw / 15.5));
+    const padj = Math.pow(10, -yy);
+    ALL.push({ s:'背景基因 #' + String(i + 1).padStart(4, '0'), lfc, padj, named:false });
+  }
+  ALL.forEach(d => { d.y = -Math.log10(d.padj); });
+}
+const DEF = { fc:1, p:0.05 };
+const statusOf = (d, fc, p) => (d.padj < p && Math.abs(d.lfc) >= fc) ? (d.lfc > 0 ? 'up' : 'down') : 'ns';
+const ARDEG_DEF = ALL.filter(d => d.named && statusOf(d, DEF.fc, DEF.p) !== 'ns').map(d => d.s);
+$$('.ardeg-n').forEach(e => e.textContent = ARDEG_DEF.length);
+$('#gene-count').textContent = GENES.length;
+$('#named-n').textContent = GENES.length;
+{ const dl = $('#gene-list'); GENES.forEach(g => dl.append(h('option', { value:g.s }, [g.a !== g.s ? g.a : '']))); }
+
+/* ---------------- tooltip ---------------- */
+const tip = $('#tip');
+function showTip(ev, rows){
+  tip.replaceChildren(...rows.map(r => h('div', { class:r.c || 'tl' }, [r.t])));
+  tip.hidden = false;
+  const pad = 14, w = tip.offsetWidth, hh = tip.offsetHeight;
+  let x = ev.clientX + pad, y = ev.clientY + pad;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - pad;
+  if (y + hh > innerHeight - 8) y = ev.clientY - hh - pad;
+  tip.style.left = Math.max(8, x) + 'px'; tip.style.top = Math.max(8, y) + 'px';
+}
+const hideTip = () => { tip.hidden = true; };
+addEventListener('scroll', hideTip, { passive:true });
+
+/* cross-module focus */
+function focusGene(sym, where){
+  if (where === 'pathway' && PW_BY[sym]){ pw.sel = sym; pwApply(); renderPwInfo(); $('#pathway').scrollIntoView(scrollOpts); }
+  else { vp.sel = sym; vpUpdate(); renderVpSide(); $('#deg').scrollIntoView(scrollOpts); }
+}
+function geneChip(sym, opts = {}){
+  const d = ALL.find(x => x.s === sym);
+  const st = d ? statusOf(d, opts.fc ?? DEF.fc, opts.p ?? DEF.p) : 'ns';
+  return h('button', { type:'button', class:'chip', title: (G[sym] ? G[sym].a + ' · ' : '') + '点击定位', onclick: () => (opts.onClick ? opts.onClick(sym) : focusGene(sym, opts.where || 'deg')) }, [
+    h('span', { class:'dot ' + st }), h('span', { class:'gene', text:sym }), opts.showV && d ? h('span', { class:'v', text:fmtFC(d.lfc) }) : null
+  ]);
+}
+function rolePill(role){ return h('span', { class:'role r-' + role, text:ROLE_ZH[role] }); }
+
+/* ================= FLOW CYTOMETRY ================= */
+const FLOW = (() => {
+  const N = 3600, rng = mulberry32(7), gauss = gaussOf(rng);
+  const pts = Array.from({ length:N }, () => ({ u:rng(), a:gauss(), b:gauss() }));
+  const POP = {
+    live:  { c:[1.35,1.25], s:[0.28,0.26] },
+    early: { c:[3.25,1.35], s:[0.33,0.28] },
+    late:  { c:[3.55,3.35], s:[0.36,0.36] },
+    nec:   { c:[1.55,3.45], s:[0.30,0.30] }
+  };
+  const GX = 2.4, GY = 2.3, LO = -0.2, HI = 5;
+  function weights(t){ const f = t / 48; const live = 0.93 - 0.63*f, late = 0.02 + 0.42*Math.pow(f,1.6), nec = 0.02 + 0.05*f; return { live, early: 1 - live - late - nec, late, nec }; }
+  function draw(){
+    const cv = $('#flow-canvas'); const W = cv.parentElement.clientWidth - 36; if (W <= 0) return;
+    const H = Math.round(Math.min(400, Math.max(260, W * 0.78)));
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.height = H + 'px';
+    const ctx = cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+    const m = { l:40, r:10, t:10, b:34 };
+    const sx = v => m.l + (v - LO) / (HI - LO) * (W - m.l - m.r);
+    const sy = v => H - m.b - (v - LO) / (HI - LO) * (H - m.t - m.b);
+    const col = { surf:tok('--surface-2'), line:tok('--line'), line2:tok('--line-2'), ink:tok('--ink'), ink2:tok('--ink-2'), muted:tok('--muted'), acc:tok('--accent') };
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = col.surf; ctx.fillRect(m.l, m.t, W - m.l - m.r, H - m.t - m.b);
+    ctx.strokeStyle = col.line; ctx.lineWidth = 1;
+    ctx.font = '11px "IBM Plex Mono", monospace'; ctx.fillStyle = col.muted;
+    const sup = ['⁰','¹','²','³','⁴','⁵'];
+    for (let k = 0; k <= 5; k++){
+      const x = Math.round(sx(k)) + 0.5, y = Math.round(sy(k)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(x, m.t); ctx.lineTo(x, H - m.b); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(m.l, y); ctx.lineTo(W - m.r, y); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText('10' + sup[k], x, H - m.b + 5);
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText('10' + sup[k], m.l - 5, y);
+    }
+    ctx.font = '12px "IBM Plex Sans", sans-serif'; ctx.fillStyle = col.ink2; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText('Annexin V-FITC', m.l + (W - m.l - m.r) / 2, H - 3);
+    ctx.save(); ctx.translate(11, m.t + (H - m.t - m.b) / 2); ctx.rotate(-Math.PI/2); ctx.fillText('PI', 0, 0); ctx.restore();
+    const t = +$('#flow-t').value, w = weights(t);
+    const cuts = [w.live, w.live + w.early, w.live + w.early + w.late];
+    const q = { live:0, early:0, late:0, nec:0 };
+    ctx.fillStyle = col.acc; ctx.globalAlpha = 0.34;
+    for (const p of pts){
+      const k = p.u < cuts[0] ? 'live' : p.u < cuts[1] ? 'early' : p.u < cuts[2] ? 'late' : 'nec';
+      const P = POP[k]; const x = P.c[0] + p.a * P.s[0], y = P.c[1] + p.b * P.s[1];
+      const qx = x >= GX, qy = y >= GY; q[qx ? (qy ? 'late' : 'early') : (qy ? 'nec' : 'live')]++;
+      const cx = Math.min(Math.max(x, LO), HI), cy = Math.min(Math.max(y, LO), HI);
+      ctx.fillRect(sx(cx) - 0.9, sy(cy) - 0.9, 1.8, 1.8);
+    }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = col.ink2; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(Math.round(sx(GX)) + 0.5, m.t); ctx.lineTo(Math.round(sx(GX)) + 0.5, H - m.b); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(m.l, Math.round(sy(GY)) + 0.5); ctx.lineTo(W - m.r, Math.round(sy(GY)) + 0.5); ctx.stroke();
+    const pct = k => (q[k] / N * 100);
+    const corner = (txt, sub, x, y, align) => {
+      ctx.textAlign = align; ctx.textBaseline = 'top';
+      ctx.font = '600 14px "IBM Plex Sans", sans-serif'; ctx.fillStyle = col.ink; ctx.fillText(txt, x, y);
+      ctx.font = '11px "IBM Plex Sans", "PingFang SC", sans-serif'; ctx.fillStyle = col.ink2; ctx.fillText(sub, x, y + 18);
+    };
+    corner(pct('nec').toFixed(1) + '%', '坏死 An⁻/PI⁺', m.l + 8, m.t + 8, 'left');
+    corner(pct('late').toFixed(1) + '%', '晚期凋亡 An⁺/PI⁺', W - m.r - 8, m.t + 8, 'right');
+    corner(pct('live').toFixed(1) + '%', '活细胞 An⁻/PI⁻', m.l + 8, H - m.b - 40, 'left');
+    corner(pct('early').toFixed(1) + '%', '早期凋亡 An⁺/PI⁻', W - m.r - 8, H - m.b - 40, 'right');
+    const st = $('#flow-stats');
+    st.replaceChildren(
+      h('div', { class:'fs' }, [h('b', { text:pct('live').toFixed(1) + '%' }), h('span', { text:'活细胞' })]),
+      h('div', { class:'fs' }, [h('b', { text:pct('early').toFixed(1) + '%' }), h('span', { text:'早期凋亡' })]),
+      h('div', { class:'fs' }, [h('b', { text:pct('late').toFixed(1) + '%' }), h('span', { text:'晚期凋亡' })]),
+      h('div', { class:'fs total' }, [h('b', { text:(pct('early') + pct('late')).toFixed(1) + '%' }), h('span', { text:'总凋亡率' })])
+    );
+  }
+  $('#flow-t').addEventListener('input', e => { $('#flow-t-out').textContent = e.target.value + ' h'; draw(); });
+  return { draw };
+})();
+
+/* ================= PATHWAY ================= */
+const DY = 24;
+const PW_NODES = [
+  ['TNF',90,40],['FASLG',210,40],['TNFSF10',330,40],
+  { id:'STRESS', x:780, y:40, kind:'stress', w:150, label:'DNA 损伤', sub:'化疗 · 辐射 · 应激' },
+  ['TNFRSF1A',90,125],['FAS',210,125],['TNFRSF10B',330,125],['TP53',780,125],
+  ['TRADD',90,200],['BCL2L11',480,200],['BAD',600,200],['BBC3',720,200],['PMAIP1',840,200],
+  ['FADD',210,270],['BCL2',600,270],['BCL2L1',720,270],['MCL1',840,270],
+  ['CFLAR',80,345],['CASP8',210,345],['BID',360,345],['BAX',560,345],['BAK1',760,345],
+  { id:'MOMP', x:660, y:430, kind:'proc', w:300, h:44, label:'线粒体外膜通透化', sub:'MOMP' },
+  ['CASP9',340,505],['APAF1',470,505],['CYCS',600,505],['DIABLO',780,505],
+  ['CASP3',210,590],['CASP7',330,590],['XIAP',560,590],
+  ['PARP1',150,680],['DFFB',290,680],
+  { id:'OUT', x:460, y:680, kind:'out', w:170, label:'细胞凋亡', sub:'DNA 片段化 · 凋亡小体' }
+].map(n => Array.isArray(n) ? { id:n[0], x:n[1], y:n[2] + DY, kind:'gene', w:96, h:38 } : { h:38, ...n, y:n.y + DY });
+const PW_BY = Object.fromEntries(PW_NODES.map(n => [n.id, n]));
+const PW_INFO_EXTRA = {
+  STRESS:{ title:'DNA 损伤与细胞应激', desc:'化疗药物、电离辐射、氧化应激、生长因子撤除等信号经 ATM/ATR 等激酶激活 p53，或直接改变 BCL-2 家族平衡，启动内源性凋亡。' },
+  MOMP:{ title:'线粒体外膜通透化（MOMP）', desc:'BAX/BAK 在线粒体外膜寡聚化成孔，是内源性凋亡的"不可逆点"。膜间隙的细胞色素 c、SMAC、Omi、AIF 等随之释放到胞质。生信研究中常用 JC-1 检测线粒体膜电位下降作为旁证。' },
+  OUT:{ title:'凋亡表型', desc:'执行 caspase 剪切数百种底物，表现为染色质凝集、核碎裂、核小体间 DNA 片段化（DNA ladder）、磷脂酰丝氨酸外翻和凋亡小体形成，最终被吞噬细胞清除，通常不引起炎症。' }
+};
+const E = (a, b, t, o = {}) => ({ a, b, t, key:a + '>' + b, ...o });
+const PW_EDGES = [
+  E('TNF','TNFRSF1A','a'), E('FASLG','FAS','a'), E('TNFSF10','TNFRSF10B','a'),
+  E('TNFRSF1A','TRADD','a'), E('TRADD','FADD','a'), E('FAS','FADD','a'), E('TNFRSF10B','FADD','a'),
+  E('FADD','CASP8','a'), E('CFLAR','CASP8','i'), E('CASP8','BID','a'), E('CASP8','CASP3','a'),
+  E('BID','BAX','a'), E('STRESS','TP53','a'), E('TP53','BBC3','a'), E('TP53','PMAIP1','a'),
+  E('BCL2L11','BAX','a'), E('BAD','BCL2','i'), E('BBC3','BCL2L1','i'), E('PMAIP1','MCL1','i'),
+  E('BCL2','BAX','i'), E('BCL2L1','BAX','i'), E('BCL2L1','BAK1','i'), E('MCL1','BAK1','i'),
+  E('BAX','MOMP','a',{ to:[560,408] }), E('BAK1','MOMP','a',{ to:[760,408] }),
+  E('MOMP','CYCS','a',{ from:[600,452] }), E('MOMP','DIABLO','a',{ from:[780,452] }),
+  E('CYCS','APAF1','a'), E('APAF1','CASP9','a'), E('CASP9','CASP3','a'), E('CASP9','CASP7','a'),
+  E('DIABLO','XIAP','i'), E('XIAP','CASP9','i'), E('XIAP','CASP7','i'), E('XIAP','CASP3','i',{ curve:[385,662] }),
+  E('CASP3','PARP1','a'), E('CASP3','DFFB','a'), E('DFFB','OUT','a'), E('CASP7','OUT','a')
+];
+const EXEC = ['CASP3>PARP1','CASP3>DFFB','DFFB>OUT','CASP7>OUT'];
+const SCEN = [
+  { key:'', name:'全部通路' },
+  { key:'ext1', name:'死亡受体（I 型）', title:'死亡受体途径 · I 型细胞',
+    nodes:['FASLG','FAS','FADD','CASP8','CASP3','PARP1','DFFB','OUT'],
+    edges:['FASLG>FAS','FAS>FADD','FADD>CASP8','CASP8>CASP3','CASP3>PARP1','CASP3>DFFB','DFFB>OUT'],
+    text:'FasL 与 FAS 结合后，受体胞内死亡结构域募集 FADD，FADD 再募集 procaspase-8 组装 DISC。caspase-8 在 DISC 上二聚化自活化，直接剪切并激活 caspase-3。这是 I 型细胞（如胸腺细胞）的主要凋亡方式；c-FLIP 高表达可在 DISC 处阻断。',
+    steps:['FasL–FAS 结合，受体三聚化','FADD 与 procaspase-8 组装 DISC','caspase-8 自活化','caspase-3 剪切 ICAD 与 PARP1','CAD 切割 DNA，细胞凋亡'] },
+  { key:'ext2', name:'BID 放大（II 型）', title:'死亡受体途径 · II 型细胞',
+    nodes:['FASLG','FAS','FADD','CASP8','BID','BAX','MOMP','CYCS','APAF1','CASP9','CASP3','CASP7','PARP1','DFFB','OUT'],
+    edges:['FASLG>FAS','FAS>FADD','FADD>CASP8','CASP8>BID','BID>BAX','BAX>MOMP','MOMP>CYCS','CYCS>APAF1','APAF1>CASP9','CASP9>CASP3','CASP9>CASP7','CASP8>CASP3', ...EXEC],
+    text:'在 II 型细胞（如肝细胞）中，DISC 产生的 caspase-8 不足以直接激活足量 caspase-3，XIAP 的抑制是重要原因。caspase-8 剪切 BID 生成 tBID，tBID 转位到线粒体激活 BAX/BAK，引发 MOMP，再经凋亡体放大 caspase 级联。因此这类细胞的死亡受体凋亡可被 BCL-2 过表达阻断。',
+    steps:['caspase-8 活化（信号较弱）','BID 被剪切为 tBID','tBID 激活 BAX，发生 MOMP','细胞色素 c 释放，凋亡体激活 caspase-9','caspase-3/7 放大执行'] },
+  { key:'intr', name:'DNA 损伤 · p53', title:'内源性途径 · DNA 损伤',
+    nodes:['STRESS','TP53','BBC3','PMAIP1','BCL2L1','MCL1','BAX','BAK1','MOMP','CYCS','DIABLO','XIAP','APAF1','CASP9','CASP3','CASP7','PARP1','DFFB','OUT'],
+    edges:['STRESS>TP53','TP53>BBC3','TP53>PMAIP1','BBC3>BCL2L1','PMAIP1>MCL1','BAX>MOMP','BAK1>MOMP','MOMP>CYCS','MOMP>DIABLO','DIABLO>XIAP','CYCS>APAF1','APAF1>CASP9','CASP9>CASP3','CASP9>CASP7', ...EXEC],
+    cut:['BCL2L1>BAX','BCL2L1>BAK1','MCL1>BAK1','XIAP>CASP9','XIAP>CASP7','XIAP>CASP3'],
+    blocked:['BCL2L1','MCL1','XIAP'],
+    text:'DNA 损伤激活 ATM/ATR–p53 轴，p53 转录上调 PUMA、NOXA 等 BH3-only 蛋白。它们中和 BCL-XL、MCL-1，释放 BAX/BAK 在线粒体外膜寡聚化，导致 MOMP。细胞色素 c 与 APAF1 组装凋亡体激活 caspase-9；同时释放的 SMAC 拮抗 XIAP，解除对 caspase 的抑制。',
+    steps:['p53 稳定并转录激活 PUMA / NOXA','BH3-only 蛋白中和 BCL-XL、MCL-1','BAX/BAK 寡聚化，发生 MOMP','凋亡体形成，caspase-9 活化','SMAC 拮抗 XIAP，caspase-3/7 执行'] },
+  { key:'vene', name:'BCL-2 抑制剂', title:'BH3 模拟物 · 维奈克拉',
+    nodes:['BCL2L11','BCL2','BAX','BAK1','MOMP','CYCS','APAF1','CASP9','CASP3','CASP7','PARP1','DFFB','OUT'],
+    edges:['BCL2L11>BAX','BAX>MOMP','BAK1>MOMP','MOMP>CYCS','CYCS>APAF1','APAF1>CASP9','CASP9>CASP3','CASP9>CASP7', ...EXEC],
+    cut:['BCL2>BAX'], blocked:['BCL2'],
+    text:'维奈克拉（venetoclax）是 BH3 模拟物，占据 BCL-2 的 BH3 结合槽，把被隔离的 BIM 等促凋亡蛋白释放出来，进而激活 BAX/BAK 引发 MOMP。已获批用于慢性淋巴细胞白血病和急性髓系白血病；MCL-1 或 BCL-XL 高表达是常见耐药机制，这也是生信研究中常把 BCL-2 家族表达谱与药物敏感性关联分析的原因。',
+    steps:['药物结合 BCL-2','BIM 被释放','BAX/BAK 活化，发生 MOMP','caspase-9 → caspase-3/7','细胞凋亡'] },
+  { key:'smac', name:'SMAC 模拟物', title:'IAP 拮抗 · SMAC 模拟物',
+    nodes:['DIABLO','XIAP','CASP9','CASP3','CASP7','PARP1','DFFB','OUT'],
+    edges:['DIABLO>XIAP','CASP9>CASP3','CASP9>CASP7', ...EXEC],
+    cut:['XIAP>CASP9','XIAP>CASP7','XIAP>CASP3'], blocked:['XIAP'],
+    text:'SMAC 模拟物模拟 SMAC 蛋白 N 端的 AVPI 基序，结合 IAP 的 BIR 结构域，解除 XIAP 对 caspase-3/7/9 的抑制，并诱导 cIAP1/2 降解。单药活性有限，多与 TRAIL、化疗或免疫治疗联合研究。',
+    steps:['SMAC 模拟物结合 XIAP / cIAP','XIAP 释放 caspase-9、-3、-7','cIAP1/2 自泛素化降解','caspase 级联得以执行'] }
+];
+const pw = { scen:'', sel:null, overlay:false };
+
+function pwRender(){
+  const svg = d3.select('#pw-svg'); svg.selectAll('*').remove();
+  svg.attr('viewBox', '0 0 1000 ' + (720 + DY));
+  svg.append('text').attr('class','pw-zone').attr('x',32).attr('y',22).text('外源性通路 · 死亡受体');
+  svg.append('text').attr('class','pw-zone').attr('x',432).attr('y',22).text('内源性通路 · 线粒体');
+  svg.append('text').attr('class','pw-zone').attr('x',32).attr('y',560).text('执行阶段');
+  const memY = (40 + 125) / 2 + DY;
+  svg.append('rect').attr('class','pw-mem').attr('x',30).attr('y',memY - 4).attr('width',385).attr('height',8).attr('rx',4);
+  svg.append('text').attr('class','pw-memlabel').attr('x',30).attr('y',memY + 18).text('细胞膜');
+  const gE = svg.append('g'), gN = svg.append('g');
+  const bnd = (n, px, py, pad = 3) => {
+    const dx = px - n.x, dy = py - n.y; if (!dx && !dy) return [n.x, n.y];
+    const hw = n.w / 2 + pad, hh = n.h / 2 + pad;
+    const t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);
+    return [n.x + dx * t, n.y + dy * t];
+  };
+  for (const e of PW_EDGES){
+    const A = PW_BY[e.a], B = PW_BY[e.b];
+    const fromXY = e.from ? [e.from[0], e.from[1] + DY + 3] : null;
+    const toXY = e.to ? [e.to[0], e.to[1] + DY - 3] : null;
+    const ctrl = e.curve ? [e.curve[0], e.curve[1] + DY] : null;
+    const S = fromXY || bnd(A, ...(ctrl || toXY || [B.x, B.y]));
+    const T = toXY || bnd(B, ...(ctrl || fromXY || [A.x, A.y]));
+    const ref = ctrl || S;
+    let ux = T[0] - ref[0], uy = T[1] - ref[1]; const L = Math.hypot(ux, uy) || 1; ux /= L; uy /= L;
+    const g = gE.append('g').attr('class','pw-edge').attr('data-key', e.key);
+    const headLen = e.t === 'a' ? 7 : 0;
+    const Tl = [T[0] - ux * headLen, T[1] - uy * headLen];
+    const d = ctrl ? `M${S[0]},${S[1]} Q${ctrl[0]},${ctrl[1]} ${Tl[0]},${Tl[1]}` : `M${S[0]},${S[1]} L${Tl[0]},${Tl[1]}`;
+    g.append('path').attr('class','ln').attr('d', d);
+    if (e.t === 'a'){
+      const px = -uy, py = ux, bx = T[0] - ux * 8, by = T[1] - uy * 8;
+      g.append('path').attr('class','hd').attr('d', `M${T[0]},${T[1]} L${bx + px*4.2},${by + py*4.2} L${bx - px*4.2},${by - py*4.2} Z`);
+    } else {
+      const px = -uy, py = ux;
+      g.append('line').attr('class','bar').attr('x1', T[0] + px*6).attr('y1', T[1] + py*6).attr('x2', T[0] - px*6).attr('y2', T[1] - py*6);
+    }
+  }
+  for (const n of PW_NODES){
+    const g0 = G[n.id];
+    const role = g0 ? g0.role : null;
+    const cls = 'pw-node k-' + n.kind + (role ? ' r-' + role : '');
+    const label = n.kind === 'gene' ? (g0.a !== n.id ? `${n.id}（${g0.a}）` : n.id) : n.label;
+    const g = gN.append('g').attr('class', cls).attr('data-id', n.id).attr('transform', `translate(${n.x},${n.y})`)
+      .attr('tabindex', 0).attr('role','button').attr('aria-label', label);
+    const rx = n.kind === 'proc' ? n.h / 2 : n.kind === 'gene' ? 8 : n.h / 2;
+    g.append('rect').attr('class','box').attr('x', -n.w/2).attr('y', -n.h/2).attr('width', n.w).attr('height', n.h).attr('rx', rx);
+    if (n.kind === 'proc') g.append('rect').attr('class','inner').attr('x', -n.w/2 + 5).attr('y', -n.h/2 + 5).attr('width', n.w - 10).attr('height', n.h - 10).attr('rx', (n.h - 10)/2);
+    const main = n.kind === 'gene' ? n.id : n.label;
+    const sub = n.kind === 'gene' ? (g0.a !== n.id ? g0.a : '') : n.sub;
+    g.append('text').attr('class','sym').attr('text-anchor','middle').attr('y', sub ? -2 : 4).text(main);
+    if (sub) g.append('text').attr('class','alias').attr('text-anchor','middle').attr('y', 12).text(sub);
+    g.append('text').attr('class','blk').attr('x', n.w/2 - 2).attr('y', -n.h/2 - 4).attr('text-anchor','end').text('已抑制');
+    g.on('click', ev => { ev.stopPropagation(); pw.sel = pw.sel === n.id ? null : n.id; pwApply(); renderPwInfo(); })
+     .on('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); pw.sel = pw.sel === n.id ? null : n.id; pwApply(); renderPwInfo(); } })
+     .on('pointerenter', ev => {
+       if (n.kind !== 'gene') return;
+       const d = ALL.find(x => x.s === n.id);
+       showTip(ev, [{ c:'tg', t:n.id + (g0.a !== n.id ? ' · ' + g0.a : '') }, { t:ROLE_ZH[g0.role] + ' · ' + g0.cls }, d ? { t:'示例 log₂FC ' + fmtFC(d.lfc) + '，padj ' + fmtP(d.padj) } : null].filter(Boolean));
+     })
+     .on('pointermove', ev => { if (!tip.hidden) showTip(ev, Array.from(tip.children).map(c => ({ c:c.className, t:c.textContent }))); })
+     .on('pointerleave', hideTip);
+  }
+  svg.on('click', () => { if (pw.sel){ pw.sel = null; pwApply(); renderPwInfo(); } });
+  pwApply();
+}
+function pwApply(){
+  const sc = SCEN.find(s => s.key === pw.scen) || SCEN[0];
+  let focusN = null, focusE = null;
+  if (pw.sel){
+    focusE = new Set(PW_EDGES.filter(e => e.a === pw.sel || e.b === pw.sel).map(e => e.key));
+    focusN = new Set([pw.sel]); PW_EDGES.forEach(e => { if (focusE.has(e.key)){ focusN.add(e.a); focusN.add(e.b); } });
+  } else if (sc.key){
+    focusN = new Set(sc.nodes); focusE = new Set(sc.edges);
+    (sc.cut || []).forEach(k => focusE.add(k));
+  }
+  const cut = new Set(!pw.sel && sc.cut ? sc.cut : []);
+  const blocked = new Set(!pw.sel && sc.blocked ? sc.blocked : []);
+  const div = d3.scaleLinear().domain([-2.5, 0, 2.5]).range([tok('--down'), tok('--mid'), tok('--up')]).interpolate(d3.interpolateLab).clamp(true);
+  d3.selectAll('#pw-svg .pw-node').each(function(){
+    const id = this.dataset.id, sel = d3.select(this);
+    sel.classed('dim', !!focusN && !focusN.has(id)).classed('sel', pw.sel === id).classed('blocked', blocked.has(id));
+    const d = ALL.find(x => x.s === id);
+    const box = sel.select('rect.box');
+    if (pw.overlay && d){
+      const c = div(d.lfc); box.style('fill', c);
+      const light = d3.lab(c).l > 58; sel.selectAll('.sym,.alias').style('fill', light ? '#15131f' : '#ffffff');
+    } else { box.style('fill', null); sel.selectAll('.sym,.alias').style('fill', null); }
+  });
+  d3.selectAll('#pw-svg .pw-edge').each(function(){
+    const k = this.dataset.key;
+    d3.select(this).classed('dim', !!focusE && !focusE.has(k)).classed('hi', !!focusE && focusE.has(k) && !cut.has(k)).classed('cut', cut.has(k));
+  });
+  pwLegend();
+}
+function pwLegend(){
+  const L = $('#pw-legend'); L.replaceChildren();
+  const arrow = h('span', { class:'lg' }); arrow.innerHTML = '<svg width="26" height="10" aria-hidden="true"><line x1="0" y1="5" x2="18" y2="5" stroke="var(--edge)" stroke-width="1.6"/><path d="M26,5 L18,1 L18,9Z" fill="var(--edge)"/></svg>'; arrow.append('激活 / 剪切');
+  const bar = h('span', { class:'lg' }); bar.innerHTML = '<svg width="26" height="12" aria-hidden="true"><line x1="0" y1="6" x2="22" y2="6" stroke="var(--edge)" stroke-width="1.6"/><line x1="23" y1="0" x2="23" y2="12" stroke="var(--edge)" stroke-width="2.2"/></svg>'; bar.append('抑制');
+  if (pw.overlay){
+    const g = h('span', { class:'lg' }, [h('span', { class:'mono', text:'−2.5' }), h('span', { class:'grad', style:`background:linear-gradient(90deg,${tok('--down')},${tok('--mid')},${tok('--up')})` }), h('span', { class:'mono', text:'+2.5' }), '示例 log₂FC']);
+    L.append(g, arrow, bar);
+  } else {
+    for (const r of ['pro','anti','dual','neutral']) L.append(h('span', { class:'lg' }, [h('span', { class:'sw', style:`--c:var(--${r});--s:var(--${r}-soft)` }), ROLE_ZH[r]]));
+    L.append(arrow, bar);
+  }
+}
+function renderPwInfo(){
+  const box = $('#pw-info'); box.replaceChildren();
+  const sc = SCEN.find(s => s.key === pw.scen) || SCEN[0];
+  if (pw.sel){
+    const n = PW_BY[pw.sel], g0 = G[pw.sel];
+    if (!g0){
+      const x = PW_INFO_EXTRA[pw.sel];
+      box.append(h('div', { class:'eyebrow', text:'过程节点' }), h('h3', { text:x.title }), h('p', { class:'desc', text:x.desc }));
+    } else {
+      const d = ALL.find(v => v.s === pw.sel);
+      box.append(
+        h('div', { class:'eyebrow', text:g0.cls }),
+        h('h3', {}, [h('span', { class:'gene', text:g0.s }), g0.a !== g0.s ? '  ' + g0.a : '']),
+        h('div', {}, [rolePill(g0.role), '  ', h('span', { class:'note', text:g0.full })]),
+        h('p', { class:'desc', text:g0.desc })
+      );
+      const ups = PW_EDGES.filter(e => e.b === n.id), downs = PW_EDGES.filter(e => e.a === n.id);
+      const nm = id => G[id] ? id : PW_INFO_EXTRA[id].title;
+      const mk = (lab, list, pick) => list.length ? h('div', {}, [h('span', { class:'lab', text:lab }), ...list.map(e => {
+        const id = pick(e);
+        return h('button', { type:'button', class:'chip', onclick: () => { pw.sel = id; pwApply(); renderPwInfo(); } }, [h('span', { text:(e.t === 'a' ? '→ ' : '⊣ ') }), h('span', { class: G[id] ? 'gene' : '', text:nm(id) })]);
+      })]) : null;
+      const rel = h('div', { class:'rel' }, [mk('上游', ups, e => e.a), mk('下游', downs, e => e.b)].filter(Boolean));
+      if (rel.children.length) box.append(rel);
+      if (d) box.append(h('dl', { class:'kv' }, [h('dt', { text:'示例 log₂FC' }), h('dd', { class:'mono', text:fmtFC(d.lfc) }), h('dt', { text:'示例 padj' }), h('dd', { class:'mono', text:fmtP(d.padj) }), h('dt', { text:'默认阈值' }), h('dd', { text:{ up:'上调', down:'下调', ns:'不显著' }[statusOf(d, DEF.fc, DEF.p)] })]));
+      box.append(h('div', { class:'links' }, [h('button', { type:'button', class:'btn', onclick: () => focusGene(pw.sel, 'deg') }, ['在火山图中查看']), h('a', { class:'btn', href:'https://www.genecards.org/cgi-bin/carddisp.pl?gene=' + g0.s, target:'_blank', rel:'noopener' }, ['GeneCards ↗'])]));
+    }
+    box.append(h('button', { type:'button', class:'btn', onclick: () => { pw.sel = null; pwApply(); renderPwInfo(); } }, ['返回' + (sc.key ? '情景说明' : '总览')]));
+    return;
+  }
+  if (sc.key){
+    box.append(h('div', { class:'eyebrow', text:'情景' }), h('h3', { text:sc.title }), h('p', { class:'desc', text:sc.text }), h('ol', {}, sc.steps.map(s => h('li', { text:s }))));
+    if (sc.blocked) box.append(h('p', { class:'note', text:'虚线边框节点表示在该情景中被抑制或中和。' }));
+    return;
+  }
+  box.append(
+    h('div', { class:'eyebrow', text:'读图' }),
+    h('h3', { text:'三个阶段，两条起始通路' }),
+    h('ul', {}, [
+      h('li', { text:'外源性通路：死亡配体结合细胞膜上的死亡受体，经 FADD 激活 caspase-8。' }),
+      h('li', { text:'内源性通路：应激信号改变 BCL-2 家族平衡，BAX/BAK 引发线粒体外膜通透化，经凋亡体激活 caspase-9。' }),
+      h('li', { text:'执行阶段：caspase-3/7 剪切底物，XIAP 在此处设卡，SMAC 解除抑制。' }),
+      h('li', { text:'BID 把两条通路连接起来：caspase-8 剪切产生的 tBID 可激活线粒体通路。' })
+    ]),
+    h('p', { class:'note', text:'打开"叠加示例表达谱"，节点颜色会按模拟数据的 log₂FC 着色，类似 Pathview 的通路叠加图。' })
+  );
+}
+{
+  const seg = $('#pw-scen');
+  SCEN.forEach(s => seg.append(h('button', { type:'button', 'data-k':s.key, 'aria-pressed': s.key === pw.scen ? 'true' : 'false', text:s.name, onclick: () => {
+    pw.scen = s.key; pw.sel = null; $$('#pw-scen button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === s.key ? 'true' : 'false')); pwApply(); renderPwInfo();
+  } })));
+  $('#pw-overlay').addEventListener('change', e => { pw.overlay = e.target.checked; pwApply(); });
+}
+
+/* ================= WORKFLOW ================= */
+const WF = [
+ { t:'数据获取', en:'Data acquisition',
+   goal:'选择与研究问题匹配的转录组数据：疾病或处理组对照组，每组样本量足够（差异分析建议每组 ≥ 3，机器学习建模需要几十例以上），平台注释完整。',
+   tools:['GEOquery','TCGAbiolinks','UCSC Xena'],
+   pts:['GEO 芯片数据使用 Series Matrix 与 GPL 平台注释；RNA-seq 优先下载原始 counts。','TCGA 使用 STAR - Counts 工作流，临床信息可从 GDC 或 UCSC Xena 获取。','记录每个数据集的平台、分组和纳入排除标准，写方法部分时直接可用。'],
+   pit:'芯片和测序数据不要直接合并表达值。先各自标准化，再做批次校正，或分别分析后取交集。',
+   code:`library(GEOquery)
+gse   <- getGEO("GSExxxxx", GSEMatrix = TRUE)   # 替换为你的数据集编号
+expr  <- exprs(gse[[1]])
+pheno <- pData(gse[[1]])
+gpl   <- getGEO(annotation(gse[[1]]))           # 平台注释
+anno  <- Table(gpl)
+
+library(TCGAbiolinks)
+query <- GDCquery(project = "TCGA-LIHC",
+                  data.category = "Transcriptome Profiling",
+                  data.type = "Gene Expression Quantification",
+                  workflow.type = "STAR - Counts")
+GDCdownload(query)
+se     <- GDCprepare(query)
+counts <- SummarizedExperiment::assay(se, "unstranded")` },
+ { t:'预处理与质控', en:'Preprocessing & QC',
+   goal:'得到可比较的表达矩阵：探针转基因名、log 转换、标准化，并检查离群样本和批次效应。',
+   tools:['limma','sva','DESeq2'],
+   pts:['同一基因对应多个探针时，常取均值或表达量最高的探针。','用 PCA 或层次聚类确认样本按组别而不是按批次聚集。','RNA-seq counts 做差异分析前不必自行标准化，DESeq2 / edgeR 会处理；作图用 vst 或 log2(CPM + 1)。'],
+   pit:'ComBat 校正后的矩阵适合可视化和下游建模；做差异分析时，更推荐把批次作为协变量写进模型（~ batch + group）。',
+   code:`library(limma); library(sva)
+# 芯片数据：最大值 > 50 视为未做 log 转换
+if (max(expr, na.rm = TRUE) > 50) expr <- log2(expr + 1)
+expr <- normalizeBetweenArrays(expr, method = "quantile")
+
+# 探针 → 基因：同一基因取均值
+symbol <- anno$\`Gene Symbol\`[match(rownames(expr), anno$ID)]
+expr   <- avereps(expr[!is.na(symbol) & symbol != "", ],
+                  ID = symbol[!is.na(symbol) & symbol != ""])
+
+# 多数据集合并时去批次（保留分组信息）
+mod     <- model.matrix(~ group)
+expr_cb <- ComBat(dat = expr, batch = batch, mod = mod)
+
+# PCA 检查分组与批次
+pca <- prcomp(t(expr_cb), scale. = TRUE)
+plot(pca$x[, 1:2], col = factor(group), pch = 19)` },
+ { t:'差异表达分析', en:'Differential expression', link:['deg','打开火山图'],
+   goal:'找出组间表达显著变化的基因（DEGs）。',
+   tools:['limma','DESeq2','edgeR'],
+   pts:['常用阈值：|log2FC| > 1 且 adj.P.Val < 0.05（BH 校正）。样本少或效应弱时，可把 FC 放宽到 1.5 倍（|log2FC| > 0.585）。','芯片数据用 limma；RNA-seq counts 用 DESeq2、edgeR 或 limma-voom。','用火山图和热图展示结果。'],
+   pit:'用未校正的 P 值筛选会带来大量假阳性。阈值要在方法里写清楚，并在全文保持一致。',
+   code:`library(limma)
+group  <- factor(group, levels = c("Normal", "Tumor"))
+design <- model.matrix(~ 0 + group)
+colnames(design) <- levels(group)
+fit  <- lmFit(expr, design)
+cont <- makeContrasts(Tumor - Normal, levels = design)
+fit2 <- eBayes(contrasts.fit(fit, cont))
+deg  <- topTable(fit2, coef = 1, number = Inf, adjust.method = "BH")
+sig  <- subset(deg, abs(logFC) > 1 & adj.P.Val < 0.05)
+
+# RNA-seq counts：DESeq2
+library(DESeq2)
+dds <- DESeqDataSetFromMatrix(counts, colData = coldata, design = ~ group)
+dds <- DESeq(dds)
+res <- results(dds, contrast = c("group", "Tumor", "Normal"))` },
+ { t:'凋亡基因集交集', en:'Apoptosis gene set',
+   goal:'把差异基因与凋亡相关基因集取交集，得到凋亡相关差异基因（ARDEGs），作为后续分析的核心候选集。',
+   tools:['msigdbr','org.Hs.eg.db','GeneCards','KEGG'],
+   pts:['常用来源：MSigDB HALLMARK_APOPTOSIS、KEGG hsa04210、GO:0006915（apoptotic process）及其子条目、GeneCards 按相关性评分筛选。','注明基因集版本和筛选规则，例如 GeneCards 的 Relevance score 阈值。','用韦恩图展示 DEGs 与凋亡基因集的交集。'],
+   pit:'GO:0006915 连同全部子条目覆盖上千个基因，范围过宽会稀释"凋亡特异性"。可以只用核心通路，或要求基因同时出现在多个来源中。',
+   code:`library(msigdbr); library(org.Hs.eg.db)
+# MSigDB Hallmark（msigdbr ≥ 10 用 collection，旧版本用 category）
+hallmark <- msigdbr(species = "Homo sapiens", collection = "H")
+h_apop   <- unique(hallmark$gene_symbol[hallmark$gs_name == "HALLMARK_APOPTOSIS"])
+
+# GO:0006915 apoptotic process（含全部子条目，范围较宽）
+go_apop <- AnnotationDbi::select(org.Hs.eg.db, keys = "GO:0006915",
+                                 keytype = "GOALL", columns = "SYMBOL")
+go_apop <- unique(go_apop$SYMBOL)
+
+apop_genes <- union(h_apop, go_apop)          # 或只用 h_apop
+ardeg <- intersect(rownames(sig), apop_genes)
+length(ardeg)` },
+ { t:'功能富集', en:'Enrichment analysis', link:['enrich','打开富集分析'],
+   goal:'说明 ARDEGs 集中在哪些生物过程和信号通路。',
+   tools:['clusterProfiler','enrichplot','msigdbr'],
+   pts:['ORA（GO / KEGG 过表达分析）只看阈值内的基因；GSEA 使用全部基因的排序，对弱而一致的变化更敏感。','GO 结果可用 simplify() 去除语义冗余条目。','看 p.adjust 而不是原始 p 值，同时报告 GeneRatio 与 Count。'],
+   pit:'用 ARDEGs 做富集时，"凋亡"相关条目必然显著，这是筛选方式决定的，不能当作独立发现。更有信息量的是凋亡以外的共富集通路，以及基于全部基因的 GSEA。',
+   code:`library(clusterProfiler); library(org.Hs.eg.db); library(enrichplot)
+eg  <- bitr(ardeg, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = org.Hs.eg.db)
+ego <- enrichGO(eg$ENTREZID, OrgDb = org.Hs.eg.db, ont = "BP",
+                pAdjustMethod = "BH", pvalueCutoff = 0.05, readable = TRUE)
+ego <- simplify(ego, cutoff = 0.7)
+ekk <- enrichKEGG(eg$ENTREZID, organism = "hsa", pvalueCutoff = 0.05)
+dotplot(ego, showCategory = 10)
+
+# GSEA：全部基因按 logFC 排序
+deg$SYMBOL <- rownames(deg)
+all_eg   <- bitr(deg$SYMBOL, "SYMBOL", "ENTREZID", OrgDb = org.Hs.eg.db)
+deg2     <- merge(deg, all_eg, by = "SYMBOL")
+geneList <- sort(setNames(deg2$logFC, deg2$ENTREZID), decreasing = TRUE)
+gsek <- gseKEGG(geneList, organism = "hsa", pvalueCutoff = 0.05)
+gseaplot2(gsek, geneSetID = "hsa04210")` },
+ { t:'PPI 网络与核心基因', en:'PPI & hub genes', link:['ppi','打开 PPI 网络'],
+   goal:'在蛋白互作网络中找出连接度高、处于枢纽位置的核心（hub）基因。',
+   tools:['STRING','Cytoscape','cytoHubba','MCODE','igraph'],
+   pts:['STRING 置信度常用 0.4（中等）或 0.7（高），隐藏孤立节点后导出。','cytoHubba 的 MCC、Degree、Betweenness 等算法各取 Top 10，再取交集作为 hub 基因。','MCODE 用于识别连接紧密的功能模块。'],
+   pit:'STRING 的边包含文本挖掘和共表达证据，不等于直接物理结合。行文中写"互作网络"，必要时只保留 experiments 与 databases 证据。',
+   code:`library(STRINGdb); library(igraph)
+string_db <- STRINGdb$new(version = "12.0", species = 9606,
+                          score_threshold = 400, input_directory = "")
+mapped <- string_db$map(data.frame(gene = ardeg), "gene",
+                        removeUnmappedRows = TRUE)
+ppi <- string_db$get_interactions(mapped$STRING_id)
+ppi$from <- mapped$gene[match(ppi$from, mapped$STRING_id)]
+ppi$to   <- mapped$gene[match(ppi$to,   mapped$STRING_id)]
+
+g   <- simplify(graph_from_data_frame(ppi[, c("from", "to")], directed = FALSE))
+top_deg <- names(head(sort(degree(g),      decreasing = TRUE), 10))
+top_bet <- names(head(sort(betweenness(g), decreasing = TRUE), 10))
+hub <- intersect(top_deg, top_bet)` },
+ { t:'机器学习筛选', en:'Machine learning',
+   goal:'从候选基因中筛选最具判别力的特征基因，并评估诊断价值。',
+   tools:['glmnet','randomForest','e1071','pROC','rms'],
+   pts:['LASSO、SVM-RFE、随机森林分别筛选后取交集，减少单一算法的偏差。','用 ROC 曲线的 AUC 评估诊断效能，并在独立外部数据集中验证。','可构建列线图，并用校准曲线和决策曲线（DCA）评估。'],
+   pit:'在全部样本上筛选特征、再在同一批样本上算 AUC，会高估模型性能。特征筛选应在训练集内完成，外部验证集不可省略。',
+   code:`library(glmnet); library(pROC)
+x <- t(expr[ardeg, ])                    # 样本 × 基因
+y <- as.integer(group == "Tumor")
+set.seed(2026)
+cvfit <- cv.glmnet(x, y, family = "binomial", alpha = 1, nfolds = 10)
+cf    <- as.matrix(coef(cvfit, s = "lambda.min"))
+lasso_genes <- setdiff(rownames(cf)[cf[, 1] != 0], "(Intercept)")
+
+# 单基因 ROC
+roc_obj <- roc(y, x[, lasso_genes[1]], ci = TRUE)
+auc(roc_obj)
+plot(roc_obj, print.auc = TRUE)` },
+ { t:'临床与免疫关联', en:'Clinical & immune',
+   goal:'评估核心基因与预后、临床特征和免疫微环境的关系。',
+   tools:['survival','survminer','GSVA','CIBERSORT','ESTIMATE'],
+   pts:['按表达中位数分高低组，绘制 KM 曲线并做 log-rank 检验；多因素 Cox 判断是否为独立预后因素。','用 ssGSEA 或 CIBERSORT 估计免疫细胞浸润，再与核心基因做 Spearman 相关。','可按核心基因做一致性聚类（ConsensusClusterPlus），比较亚型间差异。'],
+   pit:'用 surv_cutpoint 取"最佳截断值"会让 P 值偏乐观。验证集中应沿用同一截断值，而不是重新寻找。',
+   code:`library(survival); library(survminer)
+clin$grp <- ifelse(clin$gene > median(clin$gene), "High", "Low")
+fit <- survfit(Surv(OS.time, OS) ~ grp, data = clin)
+ggsurvplot(fit, pval = TRUE, risk.table = TRUE)
+summary(coxph(Surv(OS.time, OS) ~ gene + age + stage, data = clin))
+
+library(GSVA)                          # GSVA ≥ 1.50 的新接口
+param  <- ssgseaParam(as.matrix(expr), immune_sets)  # immune_sets：免疫细胞标记基因 list
+immune <- gsva(param)
+cor.test(expr["CASP3", ], immune["Activated CD8 T cell", ], method = "spearman")` },
+ { t:'实验验证', en:'Wet-lab validation', link:['top','回到流式模拟'],
+   goal:'用湿实验证实核心基因的表达变化，以及它们对细胞凋亡的功能影响。',
+   tools:['qPCR','Western blot','流式细胞术','TUNEL','JC-1'],
+   pts:['表达验证：qPCR（2^-ΔΔCt）与 Western blot 检测核心基因。','凋亡表型：Annexin V-FITC/PI 流式区分早期与晚期凋亡，TUNEL 染色，caspase-3/7 活性，JC-1 线粒体膜电位。','标志蛋白：cleaved caspase-3、cleaved PARP、BAX/BCL-2 比值。','功能实验：siRNA 敲低或过表达核心基因后观察凋亡率变化。'],
+   pit:'只报告 BAX/BCL-2 的 mRNA 比值不足以证明凋亡，至少要配合 cleaved caspase-3 或 Annexin V 等直接指标。',
+   code:`# qPCR 相对定量（2^-ΔΔCt），ct 为每个样本的 Ct 值表
+ct$dct  <- ct$target - ct$GAPDH
+ct$ddct <- ct$dct - mean(ct$dct[ct$group == "Control"])
+ct$fold <- 2^(-ct$ddct)
+t.test(fold ~ group, data = ct)` }
+];
+const RX = /(#[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|\b(TRUE|FALSE|NULL|NA|Inf|function|if|else|for|in|return|library)\b|([A-Za-z_.][\w.]*)(?=\s*\()|(\b\d+(?:\.\d+)?(?:e-?\d+)?\b)|(<-|\|>|%in%|\$)/g;
+function highlightR(src){
+  const frag = document.createDocumentFragment(); let last = 0, m;
+  RX.lastIndex = 0;
+  while ((m = RX.exec(src))){
+    if (m.index > last) frag.append(document.createTextNode(src.slice(last, m.index)));
+    const cls = m[1] ? 'tk-com' : m[2] ? 'tk-str' : m[3] ? 'tk-kw' : m[4] ? 'tk-fn' : m[5] ? 'tk-num' : 'tk-op';
+    frag.append(h('span', { class:cls, text:m[0] }));
+    last = m.index + m[0].length;
+  }
+  if (last < src.length) frag.append(document.createTextNode(src.slice(last)));
+  return frag;
+}
+let wfIdx = 0;
+function renderWF(){
+  const ol = $('#wf-steps'); ol.replaceChildren();
+  WF.forEach((s, i) => ol.append(h('li', {}, [h('button', { type:'button', 'aria-current': i === wfIdx ? 'step' : null, onclick: () => { wfIdx = i; renderWF(); } }, [
+    h('span', { class:'n', text:String(i + 1) }), h('span', { class:'t' }, [h('b', { text:s.t }), h('span', { text:s.en })])
+  ])])));
+  const s = WF[wfIdx], box = $('#wf-detail'); box.replaceChildren();
+  const pre = h('pre', { class:'code' }); const codeEl = h('code'); codeEl.append(highlightR(s.code)); pre.append(codeEl);
+  const copyBtn = h('button', { type:'button', text:'复制' });
+  copyBtn.addEventListener('click', () => {
+    const done = () => { copyBtn.textContent = '已复制'; setTimeout(() => copyBtn.textContent = '复制', 1600); };
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents(codeEl); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); copyBtn.textContent = '已选中，按 Ctrl/⌘+C'; };
+    try { navigator.clipboard.writeText(s.code).then(done, fallback); } catch { fallback(); }
+  });
+  box.append(
+    h('div', { class:'wf-top' }, [h('h3', { text:`${wfIdx + 1}. ${s.t}` }), h('span', { class:'note mono', text:s.en })]),
+    h('p', { class:'wf-goal', text:s.goal }),
+    h('div', { class:'wf-cols' }, [
+      h('div', { class:'wf-block' }, [h('h4', { text:'要点' }), h('ul', {}, s.pts.map(p => h('li', { text:p })))]),
+      h('div', { class:'wf-block' }, [h('h4', { text:'常用工具' }), h('div', { class:'chips' }, s.tools.map(t => h('span', { class:'tool', text:t }))),
+        s.link ? h('div', { style:'margin-top:8px' }, [h('button', { type:'button', class:'btn', onclick: () => document.getElementById(s.link[0]).scrollIntoView(scrollOpts) }, [s.link[1] + ' ↓'])]) : null])
+    ]),
+    h('div', { class:'pitfall' }, [h('b', { text:'常见问题　' }), s.pit]),
+    h('div', { class:'code-wrap' }, [h('div', { class:'code-bar' }, [h('span', { text:'R' }), copyBtn]), pre]),
+    h('div', { style:'display:flex;justify-content:space-between;gap:8px' }, [
+      h('button', { type:'button', class:'btn', disabled: wfIdx === 0 ? true : null, onclick: () => { wfIdx--; renderWF(); } }, ['← 上一步']),
+      h('button', { type:'button', class:'btn', disabled: wfIdx === WF.length - 1 ? true : null, onclick: () => { wfIdx++; renderWF(); } }, ['下一步 →'])
+    ])
+  );
+}
+
+/* ================= VOLCANO ================= */
+const vp = { fc:1, p:0.05, sel:null, labels:true };
+let vpScales = null;
+function vpRender(){
+  const wrap = $('#vp-chart'); wrap.replaceChildren();
+  const W = wrap.clientWidth; if (W <= 0) return;
+  const H = Math.round(Math.max(300, Math.min(460, W * 0.68)));
+  const m = { t:12, r:14, b:44, l:46 };
+  const ymax = Math.ceil(d3.max(ALL, d => d.y)) + 0.5;
+  const x = d3.scaleLinear([-4.5, 4.5], [m.l, W - m.r]);
+  const y = d3.scaleLinear([0, ymax], [H - m.b, m.t]);
+  vpScales = { x, y, W, H, m };
+  const svg = d3.select(wrap).append('svg').attr('width', W).attr('height', H).attr('role','img').attr('aria-label','差异表达火山图');
+  const gx = svg.append('g');
+  for (const t of d3.range(-4, 5)) gx.append('line').attr('class', t === 0 ? 'base-l' : 'grid-l').attr('x1', x(t)).attr('x2', x(t)).attr('y1', m.t).attr('y2', H - m.b);
+  for (const t of y.ticks(5)) gx.append('line').attr('class', t === 0 ? 'base-l' : 'grid-l').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(t)).attr('y2', y(t));
+  const ax = svg.append('g').attr('class','axis');
+  for (const t of d3.range(-4, 5)) ax.append('text').attr('x', x(t)).attr('y', H - m.b + 16).attr('text-anchor','middle').text(t);
+  for (const t of y.ticks(5)) ax.append('text').attr('x', m.l - 7).attr('y', y(t) + 4).attr('text-anchor','end').text(t);
+  svg.append('text').attr('class','axis-title').attr('x', (m.l + W - m.r) / 2).attr('y', H - 6).attr('text-anchor','middle').text('log₂ fold change（肿瘤 / 正常）');
+  svg.append('text').attr('class','axis-title').attr('transform', `translate(13,${(m.t + H - m.b) / 2}) rotate(-90)`).attr('text-anchor','middle').text('−log₁₀(padj)');
+  svg.append('g').attr('class','th');
+  const gp = svg.append('g').attr('class','pts');
+  const order = ALL.slice().sort((a, b) => a.named - b.named);
+  gp.selectAll('circle').data(order).join('circle')
+    .attr('cx', d => (d.px = x(d.lfc))).attr('cy', d => (d.py = y(Math.min(d.y, ymax))))
+    .attr('r', d => d.named ? 4.5 : 2.4);
+  svg.append('g').attr('class','labs');
+  svg.append('g').attr('class','selg');
+  const nearest = ev => {
+    const [mx, my] = d3.pointer(ev); let best = null, bd = 16 * 16;
+    for (const d of ALL){ const dx = d.px - mx, dy = d.py - my, dd = dx*dx + dy*dy; if (dd < bd || (dd === bd && d.named)){ bd = dd; best = d; } }
+    return best;
+  };
+  svg.on('pointermove', ev => {
+    const best = nearest(ev);
+    if (best){
+      svg.style('cursor','pointer');
+      const st = statusOf(best, vp.fc, vp.p);
+      showTip(ev, [{ c:best.named ? 'tg' : 'tl', t:best.s }, { c:'tv', t:'log₂FC ' + fmtFC(best.lfc) + '　padj ' + fmtP(best.padj) }, { t:{ up:'上调', down:'下调', ns:'不显著' }[st] + (best.named ? ' · ' + G[best.s].cls : '') }]);
+    } else { svg.style('cursor', null); hideTip(); }
+  }).on('pointerleave', hideTip)
+    .on('click', ev => { const b = nearest(ev); if (b){ vp.sel = b.s; vpUpdate(); renderVpSide(); } });
+  vpUpdate();
+}
+function vpUpdate(){
+  if (!vpScales) return;
+  const { x, y, W, H, m } = vpScales; const svg = d3.select('#vp-chart svg');
+  svg.selectAll('.pts circle').attr('class', d => 'pt ' + statusOf(d, vp.fc, vp.p) + (d.named ? ' named' : ''));
+  const th = svg.select('.th'); th.selectAll('*').remove();
+  const yT = y(-Math.log10(vp.p));
+  [-vp.fc, vp.fc].forEach(v => th.append('line').attr('class','th-l').attr('x1', x(v)).attr('x2', x(v)).attr('y1', m.t).attr('y2', H - m.b));
+  th.append('line').attr('class','th-l').attr('x1', m.l).attr('x2', W - m.r).attr('y1', yT).attr('y2', yT);
+  const labs = svg.select('.labs'); labs.selectAll('*').remove();
+  const cand = ALL.filter(d => (vp.labels && d.named && statusOf(d, vp.fc, vp.p) !== 'ns') || d.s === vp.sel).sort((a, b) => (b.s === vp.sel) - (a.s === vp.sel) || b.y - a.y);
+  const boxes = ALL.filter(d => d.named).map(d => [d.px - 5, d.py - 5, d.px + 5, d.py + 5]);
+  const placed = [];
+  const hit = (b) => placed.some(p => !(b[2] < p[0] || b[0] > p[2] || b[3] < p[1] || b[1] > p[3]));
+  for (const d of cand){
+    const w = d.s.length * 6.8 + 2, hh = 12;
+    const opts = [[8, 4, 'start'], [-8, 4, 'end'], [0, -9, 'middle'], [0, 16, 'middle'], [8, -8, 'start'], [-8, -8, 'end'], [8, 14, 'start'], [-8, 14, 'end']];
+    for (const [dx, dy, an] of opts){
+      const x0 = an === 'start' ? d.px + dx : an === 'end' ? d.px + dx - w : d.px - w / 2;
+      const b = [x0, d.py + dy - 10, x0 + w, d.py + dy - 10 + hh];
+      if (b[0] < m.l || b[2] > W - m.r || b[1] < 0 || b[3] > H - m.b) continue;
+      const selfBox = [d.px - 5, d.py - 5, d.px + 5, d.py + 5];
+      const others = boxes.filter(o => !(o[0] === selfBox[0] && o[1] === selfBox[1]));
+      if (hit(b) || others.some(o => !(b[2] < o[0] || b[0] > o[2] || b[3] < o[1] || b[1] > o[3]))) continue;
+      placed.push(b);
+      labs.append('text').attr('class','vlabel').attr('x', d.px + dx).attr('y', d.py + dy).attr('text-anchor', an).style('font-weight', d.s === vp.sel ? 600 : null).text(d.s);
+      break;
+    }
+  }
+  const sg = svg.select('.selg'); sg.selectAll('*').remove();
+  if (vp.sel){ const d = ALL.find(v => v.s === vp.sel); if (d) sg.append('circle').attr('class','sel-ring').attr('cx', d.px).attr('cy', d.py).attr('r', 8); }
+}
+function renderVpSide(){
+  const box = $('#vp-side'); box.replaceChildren();
+  let up = 0, down = 0; const ard = [];
+  for (const d of ALL){ const st = statusOf(d, vp.fc, vp.p); if (st === 'up') up++; else if (st === 'down') down++; if (st !== 'ns' && d.named) ard.push(d); }
+  ard.sort((a, b) => b.lfc - a.lfc);
+  box.append(h('div', { class:'stat-row' }, [
+    h('div', { class:'stat' }, [h('b', { text:up }), h('span', {}, [h('i', { style:'background:var(--up)' }), '上调'])]),
+    h('div', { class:'stat' }, [h('b', { text:down }), h('span', {}, [h('i', { style:'background:var(--down)' }), '下调'])]),
+    h('div', { class:'stat' }, [h('b', { text:ard.length }), h('span', {}, [h('i', { style:'background:var(--accent)' }), 'ARDEGs'])])
+  ]));
+  box.append(h('p', { class:'note', text:`阈值：|log₂FC| ≥ ${vp.fc.toFixed(1)} 且 padj < ${vp.p}` }));
+  box.append(h('div', {}, [h('h4', { text:'凋亡相关 DEGs' }), ard.length ? h('div', { class:'chips' }, ard.map(d => geneChip(d.s, { fc:vp.fc, p:vp.p, showV:true, onClick: s => { vp.sel = s; vpUpdate(); renderVpSide(); } }))) : h('p', { class:'empty', text:'当前阈值下没有凋亡相关差异基因，试着放宽阈值。' })]));
+  const sel = vp.sel && ALL.find(d => d.s === vp.sel);
+  if (sel){
+    const g0 = G[sel.s]; const st = statusOf(sel, vp.fc, vp.p);
+    const card = h('div', { class:'card' }, [
+      h('h3', {}, [h('span', { class: g0 ? 'gene' : '', text:sel.s }), g0 && g0.a !== g0.s ? '  ' + g0.a : '']),
+      h('div', { class:'row' }, [h('div', {}, [h('span', { text:'log₂FC ' }), h('b', { class:'mono', text:fmtFC(sel.lfc) })]), h('div', {}, [h('span', { text:'padj ' }), h('b', { class:'mono', text:fmtP(sel.padj) })]), h('div', {}, [h('span', { class:'dot ' + st, style:'display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px' }), { up:'上调', down:'下调', ns:'不显著' }[st]])])
+    ]);
+    if (g0){
+      card.append(h('div', {}, [rolePill(g0.role), '  ', h('span', { class:'note', text:g0.cls })]), h('p', { class:'desc', style:'font-size:13.5px;color:var(--ink-2)', text:g0.desc }));
+      if (PW_BY[sel.s]) card.append(h('div', {}, [h('button', { type:'button', class:'btn', onclick: () => focusGene(sel.s, 'pathway') }, ['在通路图中查看'])]));
+    } else card.append(h('p', { class:'note', text:'模拟的背景基因，用于构成火山图的整体分布。' }));
+    box.append(h('div', {}, [h('h4', { text:'选中基因' }), card]));
+  } else box.append(h('p', { class:'empty', text:'点击图中圆点，或在上方搜索基因。' }));
+}
+{
+  $('#vp-fc').addEventListener('input', e => { vp.fc = +e.target.value; $('#vp-fc-out').textContent = vp.fc.toFixed(1); vpUpdate(); renderVpSide(); });
+  $('#vp-p').addEventListener('change', e => { vp.p = +e.target.value; vpUpdate(); renderVpSide(); });
+  $('#vp-lab').addEventListener('change', e => { vp.labels = e.target.checked; vpUpdate(); });
+  const q = $('#vp-q');
+  const go = () => { const v = q.value.trim().toUpperCase(); if (!v) return; const g0 = GENES.find(g => g.s === v || g.a.toUpperCase() === v); if (g0){ vp.sel = g0.s; vpUpdate(); renderVpSide(); } };
+  q.addEventListener('change', go); q.addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+}
+
+/* ================= ENRICHMENT ================= */
+const ENR = {
+  go: [
+    ['GO:2001233','regulation of apoptotic signaling pathway','凋亡信号通路的调控',['BCL2','BCL2L1','MCL1','BBC3','BCL2L11','CFLAR','XIAP','BIRC5','FAS','TNFSF10','TNFRSF10B','FADD','CASP8','MDM2','DIABLO','APAF1'],2.1e-14],
+    ['GO:0097193','intrinsic apoptotic signaling pathway','内源性凋亡信号通路',['BCL2','BCL2L1','MCL1','BBC3','BCL2L11','CASP9','APAF1','DIABLO','MDM2','XIAP'],4.6e-12],
+    ['GO:0097191','extrinsic apoptotic signaling pathway','外源性凋亡信号通路',['FAS','CASP8','TNFSF10','TNFRSF10B','FADD','CFLAR','CASP10','BCL2','BCL2L1','MCL1'],1.3e-11],
+    ['GO:0008625','extrinsic apoptotic signaling pathway via death domain receptors','经死亡结构域受体的外源性凋亡',['FAS','CASP8','TNFSF10','TNFRSF10B','FADD','CFLAR','CASP10'],3.8e-10],
+    ['GO:0043280','positive regulation of cysteine-type endopeptidase activity involved in apoptotic process','正调控凋亡相关 caspase 活性',['FAS','CASP8','CASP9','APAF1','DIABLO','BBC3','BCL2L11','TNFSF10'],7.2e-9],
+    ['GO:2001234','negative regulation of apoptotic signaling pathway','负调控凋亡信号通路',['BCL2','BCL2L1','MCL1','CFLAR','XIAP','BIRC5','MDM2'],1.9e-7],
+    ['GO:0001836','release of cytochrome c from mitochondria','线粒体释放细胞色素 c',['BCL2','BCL2L1','MCL1','BBC3','BCL2L11'],5.4e-7],
+    ['GO:0097345','mitochondrial outer membrane permeabilization','线粒体外膜通透化',['BCL2','BCL2L1','MCL1','BBC3','BCL2L11'],1.1e-6],
+    ['GO:0008630','intrinsic apoptotic signaling pathway in response to DNA damage','DNA 损伤诱导的内源性凋亡',['BBC3','MDM2','BCL2L1','MCL1','BCL2'],3.3e-6],
+    ['GO:0034612','response to tumor necrosis factor','对肿瘤坏死因子的应答',['CASP8','CFLAR','FADD','XIAP','TNFRSF10B'],2.7e-4]
+  ],
+  kegg: [
+    ['hsa04210','Apoptosis','细胞凋亡',['FAS','CASP8','TNFSF10','TNFRSF10B','FADD','CFLAR','CASP10','BCL2','BCL2L1','MCL1','BCL2L11','BBC3','APAF1','CASP9','DIABLO','XIAP','CASP3','CASP6','PARP1'],6.8e-24],
+    ['hsa05200','Pathways in cancer','癌症通路',['FAS','CASP8','FADD','BCL2','BCL2L1','BCL2L11','BBC3','APAF1','CASP9','XIAP','BIRC5','CASP3','MDM2','TNFRSF10B','TNFSF10'],2.2e-11],
+    ['hsa01524','Platinum drug resistance','铂类药物耐药',['BCL2','BCL2L1','BBC3','BCL2L11','APAF1','CASP9','CASP8','FAS','FADD','CASP3','XIAP','BIRC5','MDM2'],1.6e-12],
+    ['hsa04115','p53 signaling pathway','p53 信号通路',['FAS','BBC3','APAF1','CASP9','CASP3','CASP8','MDM2','TNFRSF10B'],3.1e-9],
+    ['hsa04217','Necroptosis','坏死性凋亡',['FAS','CASP8','FADD','CFLAR','TNFSF10','TNFRSF10B','PARP1'],4.4e-7],
+    ['hsa04151','PI3K-Akt signaling pathway','PI3K-Akt 信号通路',['BCL2','BCL2L1','MCL1','CASP9','MDM2','BCL2L11'],2.4e-3],
+    ['hsa04668','TNF signaling pathway','TNF 信号通路',['CASP8','FADD','CFLAR','CASP3','CASP10'],3.5e-4],
+    ['hsa04064','NF-kappa B signaling pathway','NF-κB 信号通路',['CFLAR','BCL2','BCL2L1','XIAP'],6.1e-3]
+  ]
+};
+const ARD = new Set(ARDEG_DEF);
+for (const k of ['go','kegg']) ENR[k] = ENR[k].map(([id, en, zh, mem, padj]) => { const genes = mem.filter(s => ARD.has(s)); return { id, en, zh, genes, count:genes.length, ratio:genes.length / ARD.size, padj }; }).sort((a, b) => b.ratio - a.ratio || a.padj - b.padj);
+const en = { tab:'go', sel:0, gset:'anti' };
+
+function enRender(){
+  const wrap = $('#en-chart'); wrap.replaceChildren();
+  if (en.tab === 'gsea') return gseaRender();
+  const rows = ENR[en.tab];
+  const W = Math.max(600, wrap.clientWidth), rh = 38, m = { t:8, r:24, b:40, l:236 };
+  const H = m.t + rows.length * rh + m.b;
+  const xmax = Math.ceil(d3.max(rows, r => r.ratio) * 10) / 10 + 0.05;
+  const x = d3.scaleLinear([0, xmax], [m.l, W - m.r]);
+  const lp = rows.map(r => -Math.log10(r.padj));
+  const cs = d3.scaleLinear([d3.min(lp), d3.max(lp)], [tok('--seq-lo'), tok('--seq-hi')]).interpolate(d3.interpolateLab);
+  const rs = d3.scaleSqrt([0, d3.max(rows, r => r.count)], [0, 11]);
+  const svg = d3.select(wrap).append('svg').attr('width', W).attr('height', H).attr('role','img').attr('aria-label', (en.tab === 'go' ? 'GO' : 'KEGG') + ' 富集气泡图');
+  rows.forEach((r, i) => {
+    const cy = m.t + i * rh + rh / 2;
+    const g = svg.append('g').attr('class', 'en-row' + (i === en.sel ? ' on' : '')).attr('tabindex', 0).attr('role','button').attr('aria-label', r.zh);
+    g.append('rect').attr('class','hit').attr('x', 0).attr('y', cy - rh/2 + 1).attr('width', W).attr('height', rh - 2).attr('rx', 6);
+    g.append('text').attr('class','en-zh').attr('x', m.l - 14).attr('y', cy - 2).attr('text-anchor','end').text(r.zh);
+    g.append('text').attr('class','en-id').attr('x', m.l - 14).attr('y', cy + 12).attr('text-anchor','end').text(r.id);
+    g.append('line').attr('class','grid-l').attr('x1', m.l).attr('x2', x(r.ratio)).attr('y1', cy).attr('y2', cy);
+    g.append('circle').attr('class','en-dot').attr('cx', x(r.ratio)).attr('cy', cy).attr('r', rs(r.count) + 2).attr('fill', cs(-Math.log10(r.padj)));
+    const pick = () => { en.sel = i; enRender(); renderEnSide(); };
+    g.on('click', pick).on('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); pick(); } })
+     .on('pointermove', ev => showTip(ev, [{ c:'tl', t:r.en }, { c:'tv', t:`Count ${r.count} · GeneRatio ${r.count}/${ARD.size}` }, { t:'p.adjust ' + fmtP(r.padj) }]))
+     .on('pointerleave', hideTip);
+  });
+  const ax = svg.append('g').attr('class','axis');
+  const by = H - m.b + 6;
+  ax.append('line').attr('class','base-l').attr('x1', m.l).attr('x2', W - m.r).attr('y1', by - 6).attr('y2', by - 6);
+  for (const t of x.ticks(5)) ax.append('text').attr('x', x(t)).attr('y', by + 10).attr('text-anchor','middle').text(t.toFixed(1));
+  svg.append('text').attr('class','axis-title').attr('x', (m.l + W - m.r) / 2).attr('y', H - 4).attr('text-anchor','middle').text('GeneRatio');
+  const lg = h('div', { class:'legend-v', style:'margin-top:10px;grid-template-columns:auto auto;display:flex;flex-wrap:wrap;gap:12px 28px' }, [
+    h('div', { class:'gl' }, [h('span', { text:'−log₁₀(p.adjust)' }), h('span', { class:'grad', style:`width:150px;background:linear-gradient(90deg,${tok('--seq-lo')},${tok('--seq-hi')})` }), h('div', { class:'ends' }, [h('span', { text:d3.min(lp).toFixed(1) }), h('span', { text:d3.max(lp).toFixed(1) })])]),
+    h('div', { class:'gl' }, [h('span', { text:'Count' }), h('div', { class:'sizes' }, [5, 10, 15].map(c => h('div', {}, [h('i', { style:`width:${2*(rs(c)+2)}px;height:${2*(rs(c)+2)}px` }), String(c)])))])
+  ]);
+  wrap.append(lg);
+}
+function renderEnSide(){
+  const box = $('#en-side'); box.replaceChildren();
+  if (en.tab === 'gsea') return gseaSide();
+  const r = ENR[en.tab][en.sel];
+  const link = en.tab === 'go' ? 'https://www.ebi.ac.uk/QuickGO/term/' + r.id : 'https://www.kegg.jp/pathway/' + r.id;
+  box.append(
+    h('div', { class:'eyebrow', text:r.id }),
+    h('h3', { text:r.zh }),
+    h('p', { class:'note', text:r.en }),
+    h('dl', { class:'kv' }, [h('dt', { text:'Count' }), h('dd', { class:'mono', text:r.count }), h('dt', { text:'GeneRatio' }), h('dd', { class:'mono', text:`${r.count}/${ARD.size}（${r.ratio.toFixed(2)}）` }), h('dt', { text:'p.adjust' }), h('dd', { class:'mono', text:fmtP(r.padj) })]),
+    h('div', {}, [h('h4', { text:'条目中的 ARDEGs' }), h('div', { class:'chips' }, r.genes.slice().sort((a, b) => G[b].lfc - G[a].lfc).map(s => geneChip(s, { showV:true, where:'pathway', onClick: s2 => focusGene(s2, PW_BY[s2] ? 'pathway' : 'deg') })))]),
+    h('div', { class:'links' }, [h('a', { class:'btn', href:link, target:'_blank', rel:'noopener' }, [(en.tab === 'go' ? 'QuickGO' : 'KEGG') + ' ↗'])]),
+    h('p', { class:'note', text:'富集的条目名称与 ID 为真实注释，Count 与 p.adjust 基于示例数据。' })
+  );
+}
+/* GSEA */
+const RANKED = ALL.slice().sort((a, b) => b.lfc - a.lfc);
+const GSETS = {
+  anti:{ name:'抗凋亡基因集', genes:GENES.filter(g => g.role === 'anti').map(g => g.s) },
+  pro:{ name:'促凋亡基因集', genes:GENES.filter(g => g.role === 'pro').map(g => g.s) },
+  all:{ name:'全部凋亡基因', genes:GENES.map(g => g.s) }
+};
+const gseaCache = {};
+function esFromHits(pos, w, N, full){
+  const NH = pos.length, NR = pos.reduce((s, i) => s + w[i], 0), NM = N - NH;
+  let cum = 0, mx = 0, mn = 0, pk = 0;
+  const run = full ? new Float32Array(N) : null;
+  for (let j = 0; j < NH; j++){
+    const before = cum - (pos[j] - j) / NM;
+    if (before < mn){ mn = before; if (-mn > mx) pk = pos[j] - 1; }
+    cum += w[pos[j]] / NR;
+    const after = cum - (pos[j] - j) / NM;
+    if (after > mx){ mx = after; if (mx >= -mn) pk = pos[j]; }
+  }
+  const es = mx >= -mn ? mx : mn;
+  if (full){
+    let c = 0, miss = 0, hi = 0; const set = new Set(pos);
+    for (let i = 0; i < N; i++){ if (set.has(i)) c += w[i] / NR; else miss++; run[i] = c - miss / NM; }
+    let best = 0; for (let i = 0; i < N; i++) if (Math.abs(run[i]) > Math.abs(run[best])) best = i; pk = best;
+  }
+  return { es, pk, run };
+}
+function gseaCompute(key){
+  if (gseaCache[key]) return gseaCache[key];
+  const N = RANKED.length, w = RANKED.map(d => Math.abs(d.lfc));
+  const set = new Set(GSETS[key].genes);
+  const pos = []; RANKED.forEach((d, i) => { if (set.has(d.s)) pos.push(i); });
+  const obs = esFromHits(pos, w, N, true);
+  const rng = mulberry32(99 + key.length), idx = Array.from({ length:N }, (_, i) => i), perms = [];
+  for (let k = 0; k < 1000; k++){
+    for (let j = 0; j < pos.length; j++){ const r = j + Math.floor(rng() * (N - j)); const t = idx[j]; idx[j] = idx[r]; idx[r] = t; }
+    const p = idx.slice(0, pos.length).sort((a, b) => a - b);
+    perms.push(esFromHits(p, w, N, false).es);
+  }
+  const same = perms.filter(v => obs.es >= 0 ? v >= 0 : v < 0);
+  const mean = Math.abs(d3.mean(same));
+  const nes = obs.es / mean;
+  const pval = same.filter(v => Math.abs(v) >= Math.abs(obs.es)).length / same.length;
+  const lead = obs.es >= 0 ? pos.filter(i => i <= obs.pk) : pos.filter(i => i >= obs.pk);
+  return (gseaCache[key] = { ...obs, pos, nes, pval, nPerm:perms.length, lead:lead.map(i => RANKED[i].s), size:pos.length });
+}
+function gseaRender(){
+  const wrap = $('#en-chart');
+  const seg = h('div', { class:'seg', role:'group', 'aria-label':'基因集', style:'margin-bottom:10px' }, Object.entries(GSETS).map(([k, v]) => h('button', { type:'button', 'aria-pressed': k === en.gset ? 'true' : 'false', text:v.name, onclick: () => { en.gset = k; enRender(); renderEnSide(); } })));
+  wrap.append(seg);
+  const R = gseaCompute(en.gset), N = RANKED.length;
+  const W = Math.max(320, wrap.clientWidth), m = { l:46, r:14 };
+  const h1 = 180, h2 = 34, h3 = 74, gap = 8, top = 10;
+  const H = top + h1 + gap + h2 + gap + h3 + 34;
+  const x = d3.scaleLinear([0, N - 1], [m.l, W - m.r]);
+  const ext = d3.extent(R.run); const lo = Math.min(0, ext[0]) - 0.05, hi = Math.max(0, ext[1]) + 0.05;
+  const y = d3.scaleLinear([lo, hi], [top + h1, top]);
+  const svg = d3.select(wrap).append('svg').attr('width', W).attr('height', H).attr('role','img').attr('aria-label','GSEA 富集曲线');
+  for (const t of y.ticks(4)) { svg.append('line').attr('class', t === 0 ? 'base-l' : 'grid-l').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(t)).attr('y2', y(t)); svg.append('text').attr('class','tick-l').attr('x', m.l - 6).attr('y', y(t) + 4).attr('text-anchor','end').text(t.toFixed(1)); }
+  const step = Math.max(1, Math.floor(N / 800));
+  const line = d3.line().x(i => x(i)).y(i => y(R.run[i]));
+  const idxs = d3.range(0, N, step); if (idxs[idxs.length - 1] !== N - 1) idxs.push(N - 1);
+  R.pos.forEach(p => idxs.push(p, Math.max(0, p - 1))); idxs.sort((a, b) => a - b);
+  svg.append('path').attr('class','gsea-line').attr('d', line([...new Set(idxs)]));
+  svg.append('line').attr('class','th-l').attr('x1', x(R.pk)).attr('x2', x(R.pk)).attr('y1', top).attr('y2', top + h1 + gap + h2 + gap + h3);
+  svg.append('circle').attr('class','gsea-peak').attr('cx', x(R.pk)).attr('cy', y(R.run[R.pk])).attr('r', 5);
+  const esLabelRight = x(R.pk) < W * 0.6;
+  svg.append('text').attr('class','axis-title').attr('x', x(R.pk) + (esLabelRight ? 10 : -10)).attr('y', y(R.run[R.pk]) + (R.es > 0 ? 4 : 14)).attr('text-anchor', esLabelRight ? 'start' : 'end').style('font-weight', 600).style('fill','var(--ink)').text('ES = ' + R.es.toFixed(3));
+  svg.append('text').attr('class','axis-title').attr('transform', `translate(12,${top + h1/2}) rotate(-90)`).attr('text-anchor','middle').text('富集得分 ES');
+  const hy = top + h1 + gap;
+  svg.append('rect').attr('x', m.l).attr('y', hy).attr('width', W - m.l - m.r).attr('height', h2).attr('fill','var(--surface-2)');
+  R.pos.forEach(p => svg.append('line').attr('class','gsea-hit').attr('x1', x(p)).attr('x2', x(p)).attr('y1', hy + 4).attr('y2', hy + h2 - 4));
+  const my = hy + h2 + gap, ym = d3.scaleLinear([-4, 4], [my + h3, my]);
+  const area = d3.area().x((d, i) => x(i)).y0(ym(0));
+  const vals = RANKED.map(d => d.lfc);
+  svg.append('path').attr('class','gsea-pos').attr('d', area.y1(v => ym(Math.max(0, v)))(vals));
+  svg.append('path').attr('class','gsea-neg').attr('d', area.y1(v => ym(Math.min(0, v)))(vals));
+  svg.append('line').attr('class','base-l').attr('x1', m.l).attr('x2', W - m.r).attr('y1', ym(0)).attr('y2', ym(0));
+  for (const t of [-4, 0, 4]) svg.append('text').attr('class','tick-l').attr('x', m.l - 6).attr('y', ym(t) + 4).attr('text-anchor','end').text(t);
+  svg.append('text').attr('class','axis-title').attr('x', m.l + 4).attr('y', H - 8).text('← 肿瘤中上调');
+  svg.append('text').attr('class','axis-title').attr('x', W - m.r - 4).attr('y', H - 8).attr('text-anchor','end').text('肿瘤中下调 →');
+  svg.append('text').attr('class','axis-title').attr('x', (m.l + W - m.r)/2).attr('y', H - 8).attr('text-anchor','middle').text('按 log₂FC 排序的 2,000 个基因');
+  svg.on('pointermove', ev => {
+    const [mx] = d3.pointer(ev); if (mx < m.l || mx > W - m.r) { hideTip(); return; }
+    const i = Math.round(x.invert(mx)); let near = null, bd = 6;
+    for (const p of R.pos){ const d = Math.abs(x(p) - mx); if (d < bd){ bd = d; near = p; } }
+    const k = near ?? i, d = RANKED[k];
+    showTip(ev, [{ c: d.named ? 'tg' : 'tl', t:`第 ${k + 1} 位 · ${d.s}` }, { c:'tv', t:'ES ' + R.run[k].toFixed(3) + '　log₂FC ' + fmtFC(d.lfc) }]);
+  }).on('pointerleave', hideTip);
+}
+function gseaSide(){
+  const box = $('#en-side'); const R = gseaCompute(en.gset);
+  const dir = R.es > 0 ? '在肿瘤高表达一端富集' : '在肿瘤低表达一端富集';
+  box.append(
+    h('div', { class:'eyebrow', text:'GSEA' }),
+    h('h3', { text:GSETS[en.gset].name }),
+    h('dl', { class:'kv' }, [
+      h('dt', { text:'基因数' }), h('dd', { class:'mono', text:R.size }),
+      h('dt', { text:'ES' }), h('dd', { class:'mono', text:R.es.toFixed(3) }),
+      h('dt', { text:'NES' }), h('dd', { class:'mono', text:R.nes.toFixed(2) }),
+      h('dt', { text:'名义 P' }), h('dd', { class:'mono', text: R.pval === 0 ? '< ' + (1 / R.nPerm).toFixed(3) : R.pval.toFixed(3) }),
+      h('dt', { text:'方向' }), h('dd', { text:dir })
+    ]),
+    h('div', {}, [h('h4', { text:'核心富集基因（leading edge）' }), h('div', { class:'chips' }, R.lead.map(s => geneChip(s, { showV:true, onClick: s2 => focusGene(s2, PW_BY[s2] ? 'pathway' : 'deg') })))]),
+    h('p', { class:'note', text:`ES 与 NES 在页面中实时计算：加权（p = 1）的累积统计量，NES 由 ${R.nPerm} 次基因集置换标准化。示例中抗凋亡基因偏向上调、促凋亡基因偏向下调，模拟肿瘤的凋亡抵抗表型。` })
+  );
+}
+$$('#en-tabs button').forEach(b => b.addEventListener('click', () => {
+  en.tab = b.dataset.t; en.sel = 0; $$('#en-tabs button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); enRender(); renderEnSide();
+}));
+
+/* ================= PPI ================= */
+const PPI_E = [
+ ['FAS','FADD'],['FAS','CASP8'],['FAS','CFLAR'],['FAS','CASP3'],['FADD','CASP8'],['FADD','CASP10'],['FADD','CFLAR'],['FADD','TNFRSF10B'],
+ ['CASP8','CFLAR'],['CASP8','CASP10'],['CASP8','CASP3'],['CASP8','TNFRSF10B'],['CASP10','CFLAR'],['TNFSF10','TNFRSF10B'],['TNFSF10','CASP8'],['TNFRSF10B','CFLAR'],
+ ['CASP3','CASP9'],['CASP3','CASP6'],['CASP3','PARP1'],['CASP3','XIAP'],['CASP3','BIRC5'],['CASP3','MDM2'],['CASP3','APAF1'],
+ ['CASP9','APAF1'],['CASP9','XIAP'],['XIAP','DIABLO'],['BIRC5','DIABLO'],['BIRC5','XIAP'],
+ ['BCL2','BCL2L11'],['BCL2','BBC3'],['BCL2L1','BCL2L11'],['BCL2L1','BBC3'],['MCL1','BCL2L11'],['MCL1','BBC3'],['BCL2','BCL2L1'],['BCL2L1','MCL1'],
+ ['BCL2','CASP3'],['MCL1','CASP3'],['BCL2L1','CASP3'],['MDM2','BBC3']
+].filter(([a, b]) => ARD.has(a) && ARD.has(b));
+const PPI_N = ARDEG_DEF.map(s => ({ id:s }));
+const ADJ = Object.fromEntries(PPI_N.map(n => [n.id, []]));
+PPI_E.forEach(([a, b]) => { ADJ[a].push(b); ADJ[b].push(a); });
+const CENT = (() => {
+  const ids = PPI_N.map(n => n.id), n = ids.length;
+  const degree = Object.fromEntries(ids.map(i => [i, ADJ[i].length]));
+  const bet = Object.fromEntries(ids.map(i => [i, 0])), clo = {};
+  for (const s of ids){
+    const S = [], P = Object.fromEntries(ids.map(i => [i, []])), sig = Object.fromEntries(ids.map(i => [i, 0])), dist = Object.fromEntries(ids.map(i => [i, -1]));
+    sig[s] = 1; dist[s] = 0; const Q = [s];
+    while (Q.length){ const v = Q.shift(); S.push(v); for (const w of ADJ[v]){ if (dist[w] < 0){ dist[w] = dist[v] + 1; Q.push(w); } if (dist[w] === dist[v] + 1){ sig[w] += sig[v]; P[w].push(v); } } }
+    const reach = ids.filter(i => dist[i] > 0); const sum = reach.reduce((a, i) => a + dist[i], 0);
+    clo[s] = sum ? (reach.length / sum) * (reach.length / (n - 1)) : 0;
+    const del = Object.fromEntries(ids.map(i => [i, 0]));
+    while (S.length){ const w = S.pop(); for (const v of P[w]) del[v] += sig[v] / sig[w] * (1 + del[w]); if (w !== s) bet[w] += del[w]; }
+  }
+  const norm = (n - 1) * (n - 2);
+  for (const i of ids) bet[i] = bet[i] / norm;
+  return { degree, betweenness:bet, closeness:clo };
+})();
+const ppi = { metric:'degree', sel:null, hover:null };
+let ppiSim = null;
+function ppiTop(){ const sc = CENT[ppi.metric]; return PPI_N.map(n => n.id).sort((a, b) => sc[b] - sc[a] || a.localeCompare(b)).slice(0, 10); }
+function ppiRender(){
+  const wrap = $('#ppi-chart'); wrap.replaceChildren(); if (ppiSim) ppiSim.stop();
+  const W = wrap.clientWidth; if (W <= 0) return;
+  const H = W < 520 ? 440 : 470;
+  const nodes = PPI_N.map((n, i) => ({ id:n.id, x:W/2 + 160*Math.cos(i / PPI_N.length * 2 * Math.PI), y:H/2 + 160*Math.sin(i / PPI_N.length * 2 * Math.PI) }));
+  const links = PPI_E.map(([a, b]) => ({ source:a, target:b }));
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id).distance(W < 520 ? 50 : 80).strength(0.6))
+    .force('charge', d3.forceManyBody().strength(W < 520 ? -180 : -420))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('x', d3.forceX(W/2).strength(0.03)).force('y', d3.forceY(H/2).strength(0.06))
+    .force('collide', d3.forceCollide(W < 520 ? 20 : 30)).stop();
+  for (let i = 0; i < 320; i++) sim.tick();
+  const pad = 24; const clamp = d => { d.x = Math.max(pad, Math.min(W - pad, d.x)); d.y = Math.max(pad, Math.min(H - pad - 10, d.y)); };
+  nodes.forEach(clamp);
+  const svg = d3.select(wrap).append('svg').attr('width', W).attr('height', H).attr('role','img').attr('aria-label','凋亡相关差异基因的蛋白互作网络');
+  const gl = svg.append('g'), gn = svg.append('g');
+  const L = gl.selectAll('line').data(links).join('line').attr('class','ppi-link');
+  const Nd = gn.selectAll('g').data(nodes).join('g').attr('class','ppi-node').attr('tabindex', 0).attr('role','button').attr('aria-label', d => d.id);
+  Nd.append('circle').attr('class','ring');
+  Nd.append('circle').attr('class','c');
+  Nd.append('text').attr('text-anchor','middle');
+  const pos = () => {
+    L.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    Nd.attr('transform', d => `translate(${d.x},${d.y})`);
+  };
+  sim.on('tick', () => { nodes.forEach(clamp); pos(); });
+  Nd.call(d3.drag()
+    .on('start', (ev, d) => { if (!ev.active) sim.alphaTarget(0.2).restart(); d.fx = d.x; d.fy = d.y; hideTip(); })
+    .on('drag', (ev, d) => { d.fx = Math.max(pad, Math.min(W - pad, ev.x)); d.fy = Math.max(pad, Math.min(H - pad, ev.y)); })
+    .on('end', (ev, d) => { if (!ev.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+  Nd.on('click', (ev, d) => { ppi.sel = ppi.sel === d.id ? null : d.id; ppiStyle(); renderPpiSide(); })
+    .on('keydown', (ev, d) => { if (ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); ppi.sel = ppi.sel === d.id ? null : d.id; ppiStyle(); renderPpiSide(); } })
+    .on('pointerenter', (ev, d) => { ppi.hover = d.id; ppiStyle(); const sc = CENT[ppi.metric][d.id]; showTip(ev, [{ c:'tg', t:d.id + ' · ' + G[d.id].a }, { c:'tv', t:metricName() + ' ' + fmtScore(sc) }, { t:'相邻节点 ' + ADJ[d.id].length + ' 个' }]); })
+    .on('pointermove', (ev, d) => { const sc = CENT[ppi.metric][d.id]; showTip(ev, [{ c:'tg', t:d.id + ' · ' + G[d.id].a }, { c:'tv', t:metricName() + ' ' + fmtScore(sc) }, { t:'相邻节点 ' + ADJ[d.id].length + ' 个' }]); })
+    .on('pointerleave', () => { ppi.hover = null; ppiStyle(); hideTip(); });
+  svg.on('click', ev => { if (ev.target === svg.node() && ppi.sel){ ppi.sel = null; ppiStyle(); renderPpiSide(); } });
+  pos(); ppiSim = sim; ppiStyle();
+}
+const metricName = () => ({ degree:'Degree', betweenness:'Betweenness', closeness:'Closeness' })[ppi.metric];
+const fmtScore = v => ppi.metric === 'degree' ? String(v) : v.toFixed(3);
+function ppiStyle(){
+  const sc = CENT[ppi.metric], vals = Object.values(sc), mn = d3.min(vals), mx = d3.max(vals);
+  const r = v => 6 + 10 * (mx > mn ? (v - mn) / (mx - mn) : 0.5);
+  const top = new Set(ppiTop());
+  const focus = ppi.hover || ppi.sel;
+  const nb = focus ? new Set([focus, ...ADJ[focus]]) : null;
+  const Nd = d3.selectAll('#ppi-chart .ppi-node');
+  Nd.classed('top', d => top.has(d.id)).classed('sel', d => d.id === ppi.sel).classed('dim', d => !!nb && !nb.has(d.id));
+  Nd.select('circle.c').attr('r', d => r(sc[d.id])).attr('fill', d => { const g0 = ALL.find(x => x.s === d.id); return g0.lfc > 0 ? 'var(--up)' : 'var(--down)'; });
+  Nd.select('circle.ring').attr('r', d => r(sc[d.id]) + 4).style('display', d => top.has(d.id) ? null : 'none');
+  Nd.select('text').attr('y', d => r(sc[d.id]) + 14).text(d => d.id);
+  d3.selectAll('#ppi-chart .ppi-link').classed('dim', l => !!nb && !(l.source.id === focus || l.target.id === focus)).classed('hi', l => !!focus && (l.source.id === focus || l.target.id === focus));
+}
+function renderPpiSide(){
+  const box = $('#ppi-side'); box.replaceChildren();
+  const sc = CENT[ppi.metric], top = ppiTop(), mx = sc[top[0]] || 1;
+  box.append(h('div', { class:'stat-row' }, [
+    h('div', { class:'stat' }, [h('b', { text:PPI_N.length }), h('span', { text:'节点' })]),
+    h('div', { class:'stat' }, [h('b', { text:PPI_E.length }), h('span', { text:'边' })]),
+    h('div', { class:'stat' }, [h('b', { text:(2 * PPI_E.length / PPI_N.length).toFixed(1) }), h('span', { text:'平均度' })])
+  ]));
+  box.append(h('div', {}, [h('h4', { text:metricName() + ' Top 10' }), h('ol', { class:'rank' }, top.map((id, i) => h('li', {}, [h('button', { type:'button', onclick: () => { ppi.sel = id; ppiStyle(); renderPpiSide(); } }, [
+    h('span', { class:'i', text:String(i + 1) }),
+    h('span', { class:'bar' }, [h('span', { class:'gene', text:id }), h('i', { style:`width:${Math.max(4, sc[id] / mx * 100)}%` })]),
+    h('span', { class:'val', text:fmtScore(sc[id]) })
+  ])])))]));
+  const inter = ['degree','betweenness','closeness'].map(k => new Set(PPI_N.map(n => n.id).sort((a, b) => CENT[k][b] - CENT[k][a] || a.localeCompare(b)).slice(0, 10)));
+  const hub = [...inter[0]].filter(s => inter[1].has(s) && inter[2].has(s));
+  box.append(h('div', {}, [h('h4', { text:'三种算法 Top 10 的交集' }), h('div', { class:'chips' }, hub.map(s => geneChip(s, { onClick: s2 => { ppi.sel = s2; ppiStyle(); renderPpiSide(); } })))]));
+  if (ppi.sel){
+    const g0 = G[ppi.sel];
+    box.append(h('div', { class:'card' }, [
+      h('h3', {}, [h('span', { class:'gene', text:ppi.sel }), '  ' + g0.a]),
+      h('div', { class:'row' }, ['degree','betweenness','closeness'].map(k => h('div', {}, [h('span', { text:({ degree:'Degree', betweenness:'Betw.', closeness:'Clos.' })[k] + ' ' }), h('b', { class:'mono', text: k === 'degree' ? CENT[k][ppi.sel] : CENT[k][ppi.sel].toFixed(3) })]))),
+      h('div', { class:'chips' }, ADJ[ppi.sel].map(s => geneChip(s, { onClick: s2 => { ppi.sel = s2; ppiStyle(); renderPpiSide(); } }))),
+      h('div', {}, [h('button', { type:'button', class:'btn', onclick: () => focusGene(ppi.sel, PW_BY[ppi.sel] ? 'pathway' : 'deg') }, [PW_BY[ppi.sel] ? '在通路图中查看' : '在火山图中查看'])])
+    ]));
+  }
+}
+$$('#ppi-metric button').forEach(b => b.addEventListener('click', () => {
+  ppi.metric = b.dataset.m; $$('#ppi-metric button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); ppiStyle(); renderPpiSide();
+}));
+
+/* ================= GENE TABLE ================= */
+const gt = { q:'', cls:'', role:'', sort:'cls', dir:1 };
+{
+  const sel = $('#gt-cls'); CLS.forEach(c => sel.append(h('option', { value:c, text:c })));
+  sel.addEventListener('change', e => { gt.cls = e.target.value; renderGT(); });
+  $('#gt-q').addEventListener('input', e => { gt.q = e.target.value.trim().toLowerCase(); renderGT(); });
+  $$('#gt-role button').forEach(b => b.addEventListener('click', () => { gt.role = b.dataset.r; $$('#gt-role button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); renderGT(); }));
+  $$('th button[data-sort]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.sort; if (gt.sort === k) gt.dir *= -1; else { gt.sort = k; gt.dir = k === 'lfc' ? -1 : 1; } renderGT(); }));
+}
+function renderGT(){
+  const body = $('#gt-body'); body.replaceChildren();
+  let rows = GENES.filter(g => (!gt.cls || g.cls === gt.cls) && (!gt.role || g.role === gt.role) && (!gt.q || (g.s + ' ' + g.a + ' ' + g.full + ' ' + g.desc + ' ' + g.cls).toLowerCase().includes(gt.q)));
+  rows.sort((a, b) => {
+    if (gt.sort === 'lfc') return (a.lfc - b.lfc) * gt.dir;
+    if (gt.sort === 'cls') return (CLS.indexOf(a.cls) - CLS.indexOf(b.cls)) * gt.dir || a.s.localeCompare(b.s);
+    return a.s.localeCompare(b.s) * gt.dir;
+  });
+  $('#gt-count').textContent = `显示 ${rows.length} / ${GENES.length}`;
+  if (!rows.length){ body.append(h('tr', {}, [h('td', { colspan:7, class:'empty', text:'没有匹配的基因，换个关键词或清除筛选。' })])); return; }
+  for (const g of rows){
+    const st = statusOf(g, DEF.fc, DEF.p);
+    const frac = Math.min(1, Math.abs(g.lfc) / 3.5) * 50;
+    const bar = h('i', { style: g.lfc >= 0 ? `left:50%;width:${frac}%;background:var(--up)` : `right:50%;width:${frac}%;background:var(--down)` });
+    body.append(h('tr', {}, [
+      h('td', {}, [h('span', { class:'gene', text:g.s })]),
+      h('td', {}, [h('div', { text:g.a }), h('div', { class:'note', text:g.full })]),
+      h('td', { class:'cls', text:g.cls }),
+      h('td', {}, [rolePill(g.role)]),
+      h('td', {}, [h('div', { class:'fc', title:'padj ' + fmtP(g.padj) + (st !== 'ns' ? '（默认阈值下显著）' : '') }, [h('span', { class:'track' }, [bar]), h('span', { style: st === 'ns' ? 'color:var(--muted)' : 'font-weight:600', text:fmtFC(g.lfc) })])]),
+      h('td', { class:'fn', text:g.desc }),
+      h('td', {}, [h('div', { class:'acts' }, [
+        h('button', { type:'button', class:'btn', disabled: PW_BY[g.s] ? null : true, title: PW_BY[g.s] ? '在通路图中定位' : '该基因未画入通路图', onclick: () => focusGene(g.s, 'pathway') }, ['通路']),
+        h('button', { type:'button', class:'btn', onclick: () => focusGene(g.s, 'deg') }, ['火山图'])
+      ])])
+    ]));
+  }
+}
+
+/* ================= nav highlight ================= */
+{
+  const links = $$('.nav a'); const map = Object.fromEntries(links.map(a => [a.getAttribute('href').slice(1), a]));
+  const io = new IntersectionObserver(es => { es.forEach(e => { if (e.isIntersecting){ links.forEach(a => a.classList.remove('on')); map[e.target.id] && map[e.target.id].classList.add('on'); } }); }, { rootMargin:'-45% 0px -50% 0px' });
+  $$('section.sec').forEach(s => io.observe(s));
+}
+
+/* ================= boot & theme ================= */
+function renderCharts(){ FLOW.draw(); vpRender(); enRender(); ppiRender(); }
+function rethemeAll(){ FLOW.draw(); pwApply(); vpRender(); enRender(); renderEnSide(); ppiRender(); }
+pwRender(); renderPwInfo(); renderWF(); renderVpSide(); renderEnSide(); renderPpiSide(); renderGT();
+renderCharts();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', rethemeAll);
+new MutationObserver(rethemeAll).observe(document.documentElement, { attributes:true, attributeFilter:['data-theme'] });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { FLOW.draw(); vpUpdate(); });
+if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', () => { FLOW.draw(); vpUpdate(); });
+let rT = null, lastW = innerWidth;
+addEventListener('resize', () => { if (innerWidth === lastW) return; lastW = innerWidth; clearTimeout(rT); rT = setTimeout(renderCharts, 150); });
+})();
+</script>
+</body>
+</html>
